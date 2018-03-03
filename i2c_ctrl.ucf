@@ -1,8 +1,7 @@
 net	sclk		loc = a9;
-net	sda		loc = b1;
+net	sda		loc = a2;
 net	scl		loc = b2;
 net	ack_err	loc = e1;
-#net	busy		loc = e2;
 
 net	dbg_st(0) loc = h2;
 net	dbg_st(1) loc = f2;

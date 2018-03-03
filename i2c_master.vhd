@@ -38,13 +38,13 @@ entity i2c_master is
     ack_error : buffer std_logic;                    --flag if improper acknowledge from slave
     sda       : inout  std_logic;                    --serial data output of i2c bus
     scl       : inout  std_logic;                    --serial clock output of i2c bus
-	 dbg_state : out std_logic_vector(3 downto 0));
+    dbg_state : out    std_logic_vector(3 downto 0));
 end i2c_master;
 
 architecture logic of i2c_master is
 
-attribute	keep			:	string;
-attribute	mark_debug	:	string;
+attribute keep		:	string;
+attribute mark_debug	:	string;
 
   constant divider  :  integer := (input_clk/bus_clk)/4; --number of clocks in 1/4 cycle of scl
   type machine is(ready, start, command, slv_ack1, wr, rd, slv_ack2, mstr_ack, stop); --needed states
@@ -90,7 +90,6 @@ begin
       elsif(stretch = '0') then           --clock stretching from slave not detected
         count := count + 1;               --continue clock generation timing
       end if;
-
 		if ((count >= 0) and (count <= divider-1)) then
 			scl_clk <= '0';
          data_clk <= '0';
@@ -109,27 +108,7 @@ begin
 			scl_clk <= '1';
 			data_clk <= '0';
 		end if;
-			 
---      case count is
---        when integer(0) to integer(divider-1) =>            --first 1/4 cycle of clocking
---          scl_clk <= '0';
---          data_clk <= '0';
---        when divider to divider*2-1 =>    --second 1/4 cycle of clocking
---          scl_clk <= '0';
---          data_clk <= '1';
---        when divider*2 to divider*3-1 =>  --third 1/4 cycle of clocking
---          scl_clk <= '1';                 --release scl
---          if(scl = '0') then              --detect if slave is stretching clock
---            stretch <= '1';
---          else
---            stretch <= '0';
---          end if;
---          data_clk <= '1';
---        when others =>                    --last 1/4 cycle of clocking
---          scl_clk <= '1';
---          data_clk <= '0';
---      end case;
-		
+
     end if;
   end process;
 
@@ -184,7 +163,7 @@ begin
             if(bit_cnt = 0) then             --write byte transmit finished
               sda_int <= '1';                --release sda for slave acknowledge
               bit_cnt <= 7;                  --reset bit counter for "byte" states
-              state <= slv_ack2;             --go to slave acknowledge (write)				  
+              state <= slv_ack2;             --go to slave acknowledge (write)
             else                             --next clock cycle of write state
               bit_cnt <= bit_cnt - 1;        --keep track of transaction bits
               sda_int <= data_tx(bit_cnt-1); --write next bit to bus
@@ -269,23 +248,21 @@ begin
                  not data_clk_prev when stop,  --generate stop condition
                  sda_int when others;          --set to internal sda signal 
 					  
-	-- ready, start, command, slv_ack1, wr, rd, slv_ack2, mstr_ack, stop
-	with state select
-		dbg_state <= "0000" when ready,
-						"0111" when start,
-						"0011" when command,
-						"0001" when slv_ack1,
-						"1000" when wr,
-						"1100" when rd,
-						"1110" when slv_ack2,
-						"0110" when mstr_ack,
-						"1111" when stop,
-						"0000" when others;
+  -- ready, start, command, slv_ack1, wr, rd, slv_ack2, mstr_ack, stop
+  with state select
+    dbg_state <= "0000" when ready,
+                 "0001" when start,
+                 "0011" when command,
+                 "0111" when slv_ack1,
+                 "1111" when wr,
+                 "1110" when rd,
+                 "1100" when slv_ack2,
+                 "1000" when mstr_ack,
+                 "1001" when stop,
+                 "0000" when others;
   
   --set scl and sda outputs
   scl <= '0' when (scl_ena = '1' and scl_clk = '0') else 'H';
   sda <= '0' when sda_ena_n = '0' else 'H';
   
 end logic;
-
-

@@ -20,8 +20,6 @@
 library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
---use ieee.std_logic_unsigned.all; 
---use ieee.std_logic_arith.all;
 
 entity IS31FL3730_driver is
 	port(	sclk		: in std_logic;
@@ -63,7 +61,6 @@ attribute	mark_debug	:	string;
 	signal txdata		: std_logic_vector(7 downto 0);
 	signal rxdata		: std_logic_vector(7 downto 0);
 	signal ack_t		: std_logic;
-	--signal counter 	: natural := 0;
 	signal busy_cnt   : integer := 0;
 	
 	signal busy_prev  : std_logic;
@@ -193,7 +190,7 @@ begin
 		 WHEN 28 =>
 			txdata <= "11111111";     -- latch LED values                   
 		 WHEN 29 =>
-			txdata <= "00000111";     -- led intensity 
+			txdata <= "00000000";     -- led intensity 
 		 WHEN 30 =>
 			ena <= '0'; 
 		 WHEN 31 =>	
