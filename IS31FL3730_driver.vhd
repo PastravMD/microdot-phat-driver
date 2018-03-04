@@ -66,8 +66,6 @@ attribute	mark_debug	:	string;
 	
 	signal busy_prev  : std_logic;
 	signal busy       : std_logic;
-
-	variable dot_char : dot_fonts.dot_char_t;
 	
 attribute mark_debug of nrst : signal is "TRUE";
 attribute mark_debug of ena : signal is "TRUE";
@@ -106,7 +104,8 @@ begin
 	ack_err <= ack_t;
 	nrst	<= '1';
 
-	fun: process(sclk,busy)		
+	fun: process(sclk,busy)
+		variable dot_char : dot_char_t;
 	begin
 	if (rising_edge(sclk)) then
 	  busy_prev <= busy;                             --capture the value of the previous i2c busy signal
@@ -121,77 +120,79 @@ begin
 			ena <= '1';                            --initiate the transaction
 			addr <= "1100001";                    --set the address of the slave
 			rw <= '0';                             --command 1 is a write
-			txdata <= "00000000";    --cfg address        --data to be written
+			txdata <= "00000000";    --cfg register address = 0x0
 		 WHEN 1 =>
-			txdata <= "00011000";   --cfg                          
-		 WHEN 2 =>                                 
-			--txdata <= "10101010";   -- matrix 1 data ...
-			dot_char := get_dot_char(87);
+			txdata <= "00011000";   -- enable digits 1 & 2                         
+		 WHEN 2 => -- NC (matrix 1 data)
+			txdata <= "01011010";   			
+		 WHEN 3 => -- NC                                  
+			txdata <= "01011010"; 
+		 WHEN 4 => -- NC    
+			txdata <= "01011010";
+		 WHEN 5 => -- 1st                   
+			dot_char := get_dot_char(61);
 			txdata <= dot_char(4);
-		 WHEN 3 =>                                  
-			--txdata <= "10101010";                  
-			dot_char := get_dot_char(87);
+		 WHEN 6 => -- 2nd                    
+			dot_char := get_dot_char(61);
 			txdata <= dot_char(3);
-		 WHEN 4 =>    
-			--txdata <= "10101010";                    
-			dot_char := get_dot_char(87);
+		 WHEN 7 => -- 3rd
+			dot_char := get_dot_char(61);
 			txdata <= dot_char(2);
-		 WHEN 5 =>
-			--txdata <= "10101010";                   
-			dot_char := get_dot_char(87);
+		 WHEN 8 => -- 4th                 
+			dot_char := get_dot_char(61);
 			txdata <= dot_char(1);
-		 WHEN 6 =>
-			--txdata <= "10101010";                    
-			dot_char := get_dot_char(87);
+		 WHEN 9 => -- 5th
+			dot_char := get_dot_char(61);
 			txdata <= dot_char(0);
-		 WHEN 7 =>
-			txdata <= "10101010";                  
-		 WHEN 8 =>
-			txdata <= "10101010";                   
-		 WHEN 9 =>
-			txdata <= "10101010";                   
-		 WHEN 10 =>	                               
-			txdata <= "10101010"; 
-		 WHEN 11 =>                                  
-			txdata <= "10101010";    
-		 WHEN 12 =>                                  
-			txdata <= "10101010"; 			
+		 WHEN 10 =>	 -- decimal dot                               
+			txdata <= "01011010"; 
+		 WHEN 11 =>  -- NC                                 
+			txdata <= "01011010";   
+		 WHEN 12 =>  -- NC                                 
+			txdata <= "01011010"; 			
 		 WHEN 13 =>  
 			ena <= '0';                -- end transmission to start a new one   		 		                 
 		 WHEN 14 =>		   
 			ena <= '1';                -- start new transmission					
-			txdata(7 downto 4) <= "0000";		-- matrix 2 data address 
+			txdata(7) <= '0'; -- matrix 2 data address = 0xE
+			txdata(6) <= '0';
+			txdata(5) <= '0';
+			txdata(4) <= '0';
 			txdata(3) <= '1';
-			txdata(2) <= '0';
+			txdata(2) <= '1';
 			txdata(1) <= '1';
-			txdata(0) <= '1';
-		 WHEN 15 =>
-			txdata <= "01010101";     -- matrix 2 data ...              
-		 WHEN 16 =>
-			txdata <= "01010101";                  
-		 WHEN 17 =>	                                 
-			txdata <= "01010101";                   
-		 WHEN 18 =>    
-			txdata <= "01010101";                  
-		 WHEN 19 =>
-			txdata <= "01010101";                    
-		 WHEN 20 =>
-			txdata <= "01010101";                  
-		 WHEN 21 =>
-			txdata <= "01010101";                    
-		 WHEN 22 =>
-			txdata <= "01010101";                   
-		 WHEN 23 =>
-			txdata <= "01010101";                    
-		 WHEN 24 =>	                               
-			txdata <= "01010101";
-		 WHEN 25 =>                                  
-			txdata <= "01010101";                  
+			txdata(0) <= '0';
+		 WHEN 15 => -- NC (matrix 2 data) 
+			txdata <= "10100101";                   
+		 WHEN 16 =>  -- NC
+			txdata <= "10100101";                  
+		 WHEN 17 =>	 -- NC                                 
+			txdata <= "10100101";                   
+		 WHEN 18 => -- 1st
+			dot_char := get_dot_char(61);
+			txdata <= dot_char(4);                  
+		 WHEN 19 => -- 2nd
+			dot_char := get_dot_char(61);
+			txdata <= dot_char(3);                    
+		 WHEN 20 => -- 3rd
+			dot_char := get_dot_char(61);
+			txdata <= dot_char(2);                  
+		 WHEN 21 => -- 4th
+			dot_char := get_dot_char(61);
+			txdata <= dot_char(1);                    
+		 WHEN 22 => -- 5th			
+			dot_char := get_dot_char(61);
+			txdata <= dot_char(0);                  
+		 WHEN 23 => -- decimal dot
+			txdata <= "10100101";                    
+		 WHEN 24 => -- NC                              
+			txdata <= "10100101";
+		 WHEN 25 => -- NC                                 
+			txdata <= "10100101";                  
 		 WHEN 26 =>
 			ena <= '0';                -- end transmission to start a new one   		 		                 
 		 WHEN 27 =>
-			ena <= '1';                -- start new transmission
-			--txdata(7 downto 4) <= "0000??";		-- update register address	                  
+			ena <= '1';                -- start new transmission	                  
 			txdata(7) <= '0';
 			txdata(6) <= '0';
 			txdata(5) <= '0';
