@@ -20,6 +20,7 @@
 library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
+use work.dot_fonts.all;
 
 entity IS31FL3730_driver is
 	port(	sclk		: in std_logic;
@@ -65,6 +66,8 @@ attribute	mark_debug	:	string;
 	
 	signal busy_prev  : std_logic;
 	signal busy       : std_logic;
+
+	variable dot_char : dot_fonts.dot_char_t;
 	
 attribute mark_debug of nrst : signal is "TRUE";
 attribute mark_debug of ena : signal is "TRUE";
@@ -122,15 +125,25 @@ begin
 		 WHEN 1 =>
 			txdata <= "00011000";   --cfg                          
 		 WHEN 2 =>                                 
-			txdata <= "10101010";   -- matrix 1 data ...
+			--txdata <= "10101010";   -- matrix 1 data ...
+			dot_char := get_dot_char(87);
+			txdata <= dot_char(4);
 		 WHEN 3 =>                                  
-			txdata <= "10101010";                  
+			--txdata <= "10101010";                  
+			dot_char := get_dot_char(87);
+			txdata <= dot_char(3);
 		 WHEN 4 =>    
-			txdata <= "10101010";                    
+			--txdata <= "10101010";                    
+			dot_char := get_dot_char(87);
+			txdata <= dot_char(2);
 		 WHEN 5 =>
-			txdata <= "10101010";                   
+			--txdata <= "10101010";                   
+			dot_char := get_dot_char(87);
+			txdata <= dot_char(1);
 		 WHEN 6 =>
-			txdata <= "10101010";                    
+			--txdata <= "10101010";                    
+			dot_char := get_dot_char(87);
+			txdata <= dot_char(0);
 		 WHEN 7 =>
 			txdata <= "10101010";                  
 		 WHEN 8 =>
