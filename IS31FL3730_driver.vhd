@@ -63,7 +63,7 @@ attribute	mark_debug	:	string;
 	signal rxdata		: std_logic_vector(7 downto 0);
 	signal ack_t		: std_logic;
 	signal busy_cnt   : integer := 0;
-	--signal counter    : integer := 0;
+	signal counter    : integer := 0;
 	
 	signal busy_prev  : std_logic;
 	signal busy       : std_logic;
@@ -84,7 +84,7 @@ attribute mark_debug of busy : signal is "TRUE";
 attribute mark_debug of dbg_st : signal is "TRUE";
 attribute mark_debug of busy_prev : signal is "TRUE";
 attribute mark_debug of busy_cnt : signal is "TRUE";
---attribute mark_debug of counter  : signal is "TRUE";
+attribute mark_debug of counter  : signal is "TRUE";
 
 begin
 	i2c_controller: i2c_master
@@ -109,7 +109,7 @@ begin
 		variable dot_char : dot_char_t;
 	begin
 	if (rising_edge(sclk)) then
-	  --counter <= counter + 1;
+	  counter <= counter + 1;
 	  busy_prev <= busy;                             --capture the value of the previous i2c busy signal
 	  IF(busy_prev = '0' AND busy = '1') THEN        --i2c busy just went high
 		 busy_cnt <= busy_cnt + 1;                    --counts the times busy has gone from low to high during transaction
@@ -126,26 +126,19 @@ begin
 		 WHEN 1 =>
 			txdata <= "00011000";   -- enable digits 1 & 2                         
 		 WHEN 2 => -- 1 (matrix 1 data)
-			dot_char := get_dot_char(33);
-			txdata <= row(0, dot_char);   			
-		 WHEN 3 => -- 2       
-			dot_char := get_dot_char(33);
-			txdata <= row(1, dot_char); 
+			txdata <= "000" & std_logic_vector(to_unsigned(counter / 100, 5));   			
+		 WHEN 3 => -- 2                                  
+			txdata <= "000" & std_logic_vector(to_unsigned(counter / 200, 5)); 
 		 WHEN 4 => -- 3    
-			dot_char := get_dot_char(33);
-			txdata <= row(2, dot_char);
-		 WHEN 5 => -- 4      
-			dot_char := get_dot_char(33);
-			txdata <= row(3, dot_char);
-		 WHEN 6 => -- 5       
-			dot_char := get_dot_char(33);
-			txdata <= row(4, dot_char);
+			txdata <= "000" & std_logic_vector(to_unsigned(counter / 300, 5));
+		 WHEN 5 => -- 4                   
+			txdata <= "000" & std_logic_vector(to_unsigned(counter / 400, 5));
+		 WHEN 6 => -- 5                    
+			txdata <= "000" & std_logic_vector(to_unsigned(counter / 500, 5));
 		 WHEN 7 => -- 6
-			dot_char := get_dot_char(33);
-			txdata <= row(5, dot_char);
-		 WHEN 8 => -- 7      
-			dot_char := get_dot_char(33);
-			txdata <= row(6, dot_char);
+			txdata <= "000" & std_logic_vector(to_unsigned(counter / 600, 5));
+		 WHEN 8 => -- 7                 
+			txdata <= "100" & std_logic_vector(to_unsigned(counter / 700, 5));
 		 WHEN 9 =>   -- NC
 			txdata <= "00000000";
 		 WHEN 10 =>	 -- NC                               
@@ -167,26 +160,24 @@ begin
 			txdata(1) <= '1';
 			txdata(0) <= '0';
 		 WHEN 15 => -- 1 (matrix 2 data) 
-			dot_char := get_dot_char(32);
-			txdata <= col(0, dot_char);                   
+			dot_char := get_dot_char(87);
+			txdata <= dot_char(0);                   
 		 WHEN 16 =>  -- 2
-			dot_char := get_dot_char(32);
-			txdata <= col(1, dot_char);                   
+			dot_char := get_dot_char(87);
+			txdata <= dot_char(1);                   
 		 WHEN 17 =>	 -- 3                                 
-			dot_char := get_dot_char(32);
-			txdata <= col(2, dot_char);                   
+			dot_char := get_dot_char(87);
+			txdata <= dot_char(2);                    
 		 WHEN 18 => -- 4
-			dot_char := get_dot_char(32);
-			txdata <= col(3, dot_char);                   
+			dot_char := get_dot_char(87);
+			txdata <= dot_char(3);                   
 		 WHEN 19 => -- 5
-			dot_char := get_dot_char(32);
-			txdata <= col(4, dot_char);                   
+			dot_char := get_dot_char(87);
+			txdata <= dot_char(4);                     
 		 WHEN 20 => -- 6
-			dot_char := get_dot_char(32);
-			txdata <= col(4, dot_char);                   
+			txdata <= "00000000";                  
 		 WHEN 21 => -- 7
-			dot_char := get_dot_char(32);
-			txdata <= col(4, dot_char);                     
+			txdata <= "00000000";                    
 		 WHEN 22 => -- 8 (decimal dot)			
 			txdata <= "01000000";                  
 		 WHEN 23 => -- NC
