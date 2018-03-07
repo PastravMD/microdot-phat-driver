@@ -1,106 +1,146 @@
-----------------------------------------------------------------------------------
--- Company: 
--- Engineer: 
--- 
--- Create Date:    22:23:39 02/24/2018 
--- Design Name: 
--- Module Name:    IS31FL3730_driver - Behavioral 
--- Project Name: 
--- Target Devices: 
--- Tool versions: 
--- Description: 
---
--- Dependencies: 
---
--- Revision: 
--- Revision 0.01 - File Created
--- Additional Comments: 
---
-----------------------------------------------------------------------------------
 library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 use work.dot_fonts.all;
 
 entity IS31FL3730_driver is
-	port(	sclk		: in std_logic;
-			scl		: inout std_logic;
-			sda		: inout std_logic;
-			ack_err	: out std_logic;
-			dbg_st	: out std_logic_vector (3 downto 0));
+--	generic	();
+	port (	sclk		: in	std_logic;
+		char_code 	: in	integer;
+		dec_dot		: in	std_logic;
+		ltp_addr	: in	ltp305_addr;
+		en_cmd		: in	std_logic);
 end IS31FL3730_driver;
 
-architecture stimulus of IS31FL3730_driver is 
+architecture arch of IS31FL3730_driver is 
+	type ltp_update_state is (ready, init_dot_tx, byte_0, byte_1, byte_2, byte_3, byte_4, byte_5, 
+					byte_6, byte_7, end_dot_tx, init_update, update_latch, finish);
+	signal ns, ps			: ltp_update_state;
 
-	component i2c_master
-   generic(
-    input_clk : integer := 12_000_000; --input clock speed from user logic in hz
-    bus_clk   : integer := 100_000);   --speed the i2c bus (scl) will run at in hz	
-	port(
-	    clk       : in     std_logic;                    --system clock
-	    reset_n   : in     std_logic;                    --active low reset
-	    ena       : in     std_logic;                    --latch in command
-	    addr      : in     std_logic_vector(6 downto 0); --address of target slave
-	    rw        : in     std_logic;                    --'0' is write, '1' is read
-	    data_wr   : in     std_logic_vector(7 downto 0); --data to write to slave
-	    busy      : out    std_logic;                    --indicates transaction in progress
-	    data_rd   : out    std_logic_vector(7 downto 0); --data read from slave
-	    ack_error : buffer std_logic;                    --flag if improper acknowledge from slave
-	    sda       : inout  std_logic;                    --serial data output of i2c bus
-	    scl       : inout  std_logic;                    --serial clock output of i2c bus
-		 dbg_state : out std_logic_vector(3 downto 0));
-	end component;
-
-attribute	keep			:	string;
-attribute	mark_debug	:	string;
-
--- signals --
-	signal nrst			: std_logic;
-	signal ena			: std_logic;
-	signal rw			: std_logic;
-	signal addr			: std_logic_vector(6 downto 0); 
+	attribute	keep		:	string;
+	attribute	mark_debug	:	string;
+	
+	signal nrst		: std_logic;
+	signal ena		: std_logic;
+	signal rw		: std_logic;
+	signal addr		: std_logic_vector(6 downto 0); 
 	signal txdata		: std_logic_vector(7 downto 0);
 	signal rxdata		: std_logic_vector(7 downto 0);
 	signal ack_t		: std_logic;
-	signal busy_cnt   : integer := 0;
-	--signal counter    : integer := 0;
+	signal busy_cnt		: integer := 0;
+	signal busy_prev  	: std_logic;
+	signal busy       	: std_logic;
+		
+	attribute mark_debug of nrst : signal is "TRUE";
+	attribute mark_debug of ena : signal is "TRUE";
+	attribute mark_debug of rw : signal is "TRUE";
+	attribute mark_debug of addr : signal is "TRUE";
+	attribute mark_debug of txdata : signal is "TRUE";
+	attribute mark_debug of rxdata : signal is "TRUE";
+	attribute mark_debug of ack_t : signal is "TRUE";
 	
-	signal busy_prev  : std_logic;
-	signal busy       : std_logic;
-	
-attribute mark_debug of nrst : signal is "TRUE";
-attribute mark_debug of ena : signal is "TRUE";
-attribute mark_debug of rw : signal is "TRUE";
-attribute mark_debug of addr : signal is "TRUE";
-attribute mark_debug of txdata : signal is "TRUE";
-attribute mark_debug of rxdata : signal is "TRUE";
-attribute mark_debug of ack_t : signal is "TRUE";
+	attribute mark_debug of sclk : signal is "TRUE";
+	attribute mark_debug of scl : signal is "TRUE";
+	attribute mark_debug of sda : signal is "TRUE";
+	attribute mark_debug of ack_err : signal is "TRUE";
+	attribute mark_debug of busy : signal is "TRUE";
+	attribute mark_debug of dbg_st : signal is "TRUE";
+	attribute mark_debug of busy_prev : signal is "TRUE";
+	attribute mark_debug of busy_cnt : signal is "TRUE";
 
-attribute mark_debug of sclk : signal is "TRUE";
-attribute mark_debug of scl : signal is "TRUE";
-attribute mark_debug of sda : signal is "TRUE";
-attribute mark_debug of ack_err : signal is "TRUE";
-attribute mark_debug of busy : signal is "TRUE";
-attribute mark_debug of dbg_st : signal is "TRUE";
-attribute mark_debug of busy_prev : signal is "TRUE";
-attribute mark_debug of busy_cnt : signal is "TRUE";
---attribute mark_debug of counter  : signal is "TRUE";
+
+	component i2c_master
+		generic(	input_clk : integer := 12_000_000; --input clock speed from user logic in hz
+				bus_clk   : integer := 100_000);   --speed the i2c bus (scl) will run at in hz	
+
+		port(	clk       : in     std_logic;                    --system clock
+			reset_n   : in     std_logic;                    --active low reset
+			ena       : in     std_logic;                    --latch in command
+			addr      : in     std_logic_vector(6 downto 0); --address of target slave
+			rw        : in     std_logic;                    --'0' is write, '1' is read
+			data_wr   : in     std_logic_vector(7 downto 0); --data to write to slave
+			busy      : out    std_logic;                    --indicates transaction in progress
+			data_rd   : out    std_logic_vector(7 downto 0); --data read from slave
+			ack_error : buffer std_logic;                    --flag if improper acknowledge from slave
+			sda       : inout  std_logic;                    --serial data output of i2c bus
+			scl       : inout  std_logic;                    --serial clock output of i2c bus
+			dbg_state : out std_logic_vector(3 downto 0));
+	end component;
 
 begin
 	i2c_controller: i2c_master
 	generic map (12_000_000, 100_000)
-	port map(	 clk			=> sclk,
-                reset_n 	=> nrst,
-                ena			=> ena,
-                addr			=> addr,
-                rw			=> rw,
-                data_wr		=> txdata,
-                data_rd		=> rxdata,
-                busy			=> busy,
-                ack_error	=> ack_t,
-                sda			=> sda, 
-                scl			=> scl,
-                dbg_state	=> dbg_st);
+	port map(	clk		=> sclk,
+			reset_n 	=> nrst,
+			ena		=> ena,
+			addr		=> addr,
+			rw		=> rw,
+			data_wr		=> txdata,
+			data_rd		=> rxdata,
+			busy		=> busy,
+			ack_error	=> ack_t,
+			sda		=> sda, 
+			scl		=> scl);
+
+	sync_proc: process(sclk, nextstate)
+	begin
+		if (rising_edge(CLK)) then
+			ps <= ns;
+		end if;
+	end process sync_proc;
+
+	comb_proc: process(ps, en_cmd)
+		variable dot_char : dot_char_t;
+	begin
+		
+		case ps is
+			when ready =>
+				ack_err		<= ack_t;
+				nrst		<= '1';
+			when init_dot_tx =>
+				dot_char 	:= get_dot_char(char_code);
+				ena		<= '1';
+				rw		<= '0';
+				addr		<= ltp_addr.i2c;
+				if ltp_addr.module = '0' then
+					txdata = "00000001"; -- 0x1 mat 1 data
+				else
+					txdata = "00001110"; -- 0xE mat 2 data
+				end if;
+			when byte_0 =>
+				txdata		<= dotline(dot_char, 0, ltp_addr.module);
+			when byte_1 =>
+				txdata		<= dotline(dot_char, 1, ltp_addr.module);
+			when byte_2 =>
+				txdata		<= dotline(dot_char, 2, ltp_addr.module);
+			when byte_3 =>
+				txdata		<= dotline(dot_char, 3, ltp_addr.module);
+			when byte_4 =>
+				txdata		<= dotline(dot_char, 4, ltp_addr.module);
+			when byte_5 =>
+				txdata		<= dotline(dot_char, 5, ltp_addr.module);
+			when byte_6 =>
+				txdata		<= dotline(dot_char, 6, ltp_addr.module);
+			when byte_7 =>
+				txdata		<= dotline(dot_char, 7, ltp_addr.module);
+			when end_dot_tx =>
+				ena		<= '0';
+			when init_update =>
+				ena		<= '1';
+				txdata = "00001100"; -- 0xC update reg
+			when update_latch =>
+				txdata = "11111111";
+			when finish =>
+				ena		<= '0';
+			when others => NULL;
+
+
+
+
+
+
+
+
 
 	ack_err <= ack_t;
 	nrst	<= '1';

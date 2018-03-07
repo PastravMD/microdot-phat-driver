@@ -9,6 +9,7 @@ package dot_fonts is
 	function get_dot_char(ascii_code : integer) return dot_char_t;
 	function col(x : integer; dots : dot_char_t) return std_logic_vector;
 	function row(y : integer; dots : dot_char_t) return std_logic_vector;
+	function dotline(dots : dot_char_t, line_nr : unsigned, module_sel : std_logic);
 end package dot_fonts;
 
 
@@ -52,5 +53,18 @@ package body dot_fonts is
 	begin
 		return "000" & dots(y, 4) & dots(y, 3) & dots(y, 2) & dots(y, 1) & dots(y, 0);
 	end function row;
+
+	function dotline(dots : dot_char_t,
+			line_nr : integer,
+			module_sel : std_logic) return std_logic_vector is
+
+		variable dl : std_logic_vector(7 downto 0);
+	begin
+		if module_sel = '0' then
+			dl := row(line_nr, dots);
+		else
+			dl := col(line_nr, dots);
+		end if;
+	end function dotline;
 
 end package body dot_fonts;
