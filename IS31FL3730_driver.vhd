@@ -2,24 +2,23 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 use work.dot_fonts.all;
+use work.ltp305.all;
 
 entity IS31FL3730_driver is
 --	generic	();
 	port (	sclk		: in	std_logic;
 		char_code 	: in	integer;
 		dec_dot		: in	std_logic;
-		ltp_addr	: in	ltp305_addr;
-		en_cmd		: in	std_logic);
+		ltp_addr	: in	ltp_addr_t;
+		en_cmd		: in	std_logic;
+		sda		: inout std_logic;
+		scl		: inout std_logic);
 end IS31FL3730_driver;
 
 architecture arch of IS31FL3730_driver is 
-	type ltp_update_state is (ready, init_dot_tx, byte_0, byte_1, byte_2, byte_3, byte_4, byte_5, 
-					byte_6, byte_7, end_dot_tx, init_update, update_latch, finish);
-	signal ns, ps			: ltp_update_state;
-
-	attribute	keep		:	string;
-	attribute	mark_debug	:	string;
-	
+	type ltp_update_state is (st_ready, st_init_data_tx, st_byte_0, st_byte_1, st_byte_2, st_byte_3, st_byte_4, st_byte_5, 
+					st_byte_6, st_byte_7, st_end_data_tx, st_init_update, st_update_latch, st_finish);
+	signal ns, ps		: ltp_update_state;
 	signal nrst		: std_logic;
 	signal ena		: std_logic;
 	signal rw		: std_logic;
@@ -27,10 +26,9 @@ architecture arch of IS31FL3730_driver is
 	signal txdata		: std_logic_vector(7 downto 0);
 	signal rxdata		: std_logic_vector(7 downto 0);
 	signal ack_t		: std_logic;
-	signal busy_cnt		: integer := 0;
-	signal busy_prev  	: std_logic;
 	signal busy       	: std_logic;
 		
+	attribute mark_debug : string;
 	attribute mark_debug of nrst : signal is "TRUE";
 	attribute mark_debug of ena : signal is "TRUE";
 	attribute mark_debug of rw : signal is "TRUE";
@@ -42,12 +40,7 @@ architecture arch of IS31FL3730_driver is
 	attribute mark_debug of sclk : signal is "TRUE";
 	attribute mark_debug of scl : signal is "TRUE";
 	attribute mark_debug of sda : signal is "TRUE";
-	attribute mark_debug of ack_err : signal is "TRUE";
 	attribute mark_debug of busy : signal is "TRUE";
-	attribute mark_debug of dbg_st : signal is "TRUE";
-	attribute mark_debug of busy_prev : signal is "TRUE";
-	attribute mark_debug of busy_cnt : signal is "TRUE";
-
 
 	component i2c_master
 		generic(	input_clk : integer := 12_000_000; --input clock speed from user logic in hz
@@ -63,8 +56,7 @@ architecture arch of IS31FL3730_driver is
 			data_rd   : out    std_logic_vector(7 downto 0); --data read from slave
 			ack_error : buffer std_logic;                    --flag if improper acknowledge from slave
 			sda       : inout  std_logic;                    --serial data output of i2c bus
-			scl       : inout  std_logic;                    --serial clock output of i2c bus
-			dbg_state : out std_logic_vector(3 downto 0));
+			scl       : inout  std_logic);                   --serial clock output of i2c bus
 	end component;
 
 begin
@@ -82,181 +74,96 @@ begin
 			sda		=> sda, 
 			scl		=> scl);
 
-	sync_proc: process(sclk, nextstate)
+	sync_proc: process(sclk, ns)
 	begin
-		if (rising_edge(CLK)) then
+		if (rising_edge(sclk)) then
 			ps <= ns;
 		end if;
 	end process sync_proc;
 
-	comb_proc: process(ps, en_cmd)
+	comb_proc: process(ps, en_cmd, busy)
 		variable dot_char : dot_char_t;
 	begin
 		
 		case ps is
-			when ready =>
-				ack_err		<= ack_t;
-				nrst		<= '1';
-			when init_dot_tx =>
+			when st_ready =>
+				nrst		<= '0';
+				if rising_edge(en_cmd) then
+					ns <= st_init_data_tx;
+				end if;
+			when st_init_data_tx =>
 				dot_char 	:= get_dot_char(char_code);
+				nrst		<= '1';
 				ena		<= '1';
 				rw		<= '0';
-				addr		<= ltp_addr.i2c;
+				addr		<= std_logic_vector(to_unsigned(ltp_addr.i2c, 7));
 				if ltp_addr.module = '0' then
-					txdata = "00000001"; -- 0x1 mat 1 data
+					txdata <= "00000001"; -- 0x1 mat 1 data reg address
 				else
-					txdata = "00001110"; -- 0xE mat 2 data
+					txdata <= "00001110"; -- 0xE mat 2 data reg address
 				end if;
-			when byte_0 =>
+
+				if rising_edge(busy) then
+					ns <= st_byte_0;
+				end if;
+			when st_byte_0 =>
 				txdata		<= dotline(dot_char, 0, ltp_addr.module);
-			when byte_1 =>
+				if rising_edge(busy) then
+					ns <= st_byte_1;
+				end if;
+			when st_byte_1 =>
 				txdata		<= dotline(dot_char, 1, ltp_addr.module);
-			when byte_2 =>
+				if rising_edge(busy) then
+					ns <= st_byte_2;
+				end if;
+			when st_byte_2 =>
 				txdata		<= dotline(dot_char, 2, ltp_addr.module);
-			when byte_3 =>
+				if rising_edge(busy) then
+					ns <= st_byte_3;
+				end if;
+			when st_byte_3 =>
 				txdata		<= dotline(dot_char, 3, ltp_addr.module);
-			when byte_4 =>
+				if rising_edge(busy) then
+					ns <= st_byte_4;
+				end if;
+			when st_byte_4 =>
 				txdata		<= dotline(dot_char, 4, ltp_addr.module);
-			when byte_5 =>
+				if rising_edge(busy) then
+					ns <= st_byte_5;
+				end if;
+			when st_byte_5 =>
 				txdata		<= dotline(dot_char, 5, ltp_addr.module);
-			when byte_6 =>
+				if rising_edge(busy) then
+					ns <= st_byte_6;
+				end if;
+			when st_byte_6 =>
 				txdata		<= dotline(dot_char, 6, ltp_addr.module);
-			when byte_7 =>
+				if rising_edge(busy) then
+					ns <= st_byte_7;
+				end if;
+			when st_byte_7 =>
 				txdata		<= dotline(dot_char, 7, ltp_addr.module);
-			when end_dot_tx =>
+				if rising_edge(busy) then
+					ns <= st_end_data_tx;
+				end if;
+			when st_end_data_tx =>
 				ena		<= '0';
-			when init_update =>
+				ns <= st_init_update;
+			when st_init_update =>
 				ena		<= '1';
-				txdata = "00001100"; -- 0xC update reg
-			when update_latch =>
-				txdata = "11111111";
-			when finish =>
+				txdata <= "00001100"; -- 0xC update reg address
+				if rising_edge(busy) then
+					ns <= st_update_latch;
+				end if;
+			when st_update_latch =>
+				txdata <= "11111111";
+				if rising_edge(busy) then
+					ns <= st_finish;
+				end if;
+			when st_finish =>
 				ena		<= '0';
+				ns <= st_ready;
 			when others => NULL;
-
-
-
-
-
-
-
-
-
-	ack_err <= ack_t;
-	nrst	<= '1';
-
-	fun: process(sclk,busy)
-		variable dot_char : dot_char_t;
-	begin
-	if (rising_edge(sclk)) then
-	  --counter <= counter + 1;
-	  busy_prev <= busy;                             --capture the value of the previous i2c busy signal
-	  IF(busy_prev = '0' AND busy = '1') THEN        --i2c busy just went high
-		 busy_cnt <= busy_cnt + 1;                    --counts the times busy has gone from low to high during transaction
-	  elsif (busy = '0') and ((busy_cnt = 13) or (busy_cnt = 26) or (busy_cnt = 30)) then
-		busy_cnt <= busy_cnt + 1;
-	  end if;
-	  
-	  CASE busy_cnt IS                             --busy_cnt keeps track of which command we are on
-		 WHEN 0 =>                                  --no command latched in yet
-			ena <= '1';                            --initiate the transaction
-			addr <= "1100001";                    --set the address of the slave
-			rw <= '0';                             --command 1 is a write
-			txdata <= "00000000";    --cfg register address = 0x0
-		 WHEN 1 =>
-			txdata <= "00011000";   -- enable digits 1 & 2                         
-		 WHEN 2 => -- 1 (matrix 1 data)
-			dot_char := get_dot_char(33);
-			txdata <= row(0, dot_char);   			
-		 WHEN 3 => -- 2       
-			dot_char := get_dot_char(33);
-			txdata <= row(1, dot_char); 
-		 WHEN 4 => -- 3    
-			dot_char := get_dot_char(33);
-			txdata <= row(2, dot_char);
-		 WHEN 5 => -- 4      
-			dot_char := get_dot_char(33);
-			txdata <= row(3, dot_char);
-		 WHEN 6 => -- 5       
-			dot_char := get_dot_char(33);
-			txdata <= row(4, dot_char);
-		 WHEN 7 => -- 6
-			dot_char := get_dot_char(33);
-			txdata <= row(5, dot_char);
-		 WHEN 8 => -- 7      
-			dot_char := get_dot_char(33);
-			txdata <= row(6, dot_char);
-		 WHEN 9 =>   -- NC
-			txdata <= "00000000";
-		 WHEN 10 =>	 -- NC                               
-			txdata <= "00000000"; 
-		 WHEN 11 =>  -- NC                                 
-			txdata <= "00000000";   
-		 WHEN 12 =>  -- NC                                 
-			txdata <= "00000000"; 			
-		 WHEN 13 =>  
-			ena <= '0';                -- end transmission to start a new one   		 		                 
-		 WHEN 14 =>		   
-			ena <= '1';                -- start new transmission					
-			txdata(7) <= '0'; -- matrix 2 data address = 0xE
-			txdata(6) <= '0';
-			txdata(5) <= '0';
-			txdata(4) <= '0';
-			txdata(3) <= '1';
-			txdata(2) <= '1';
-			txdata(1) <= '1';
-			txdata(0) <= '0';
-		 WHEN 15 => -- 1 (matrix 2 data) 
-			dot_char := get_dot_char(32);
-			txdata <= col(0, dot_char);                   
-		 WHEN 16 =>  -- 2
-			dot_char := get_dot_char(32);
-			txdata <= col(1, dot_char);                   
-		 WHEN 17 =>	 -- 3                                 
-			dot_char := get_dot_char(32);
-			txdata <= col(2, dot_char);                   
-		 WHEN 18 => -- 4
-			dot_char := get_dot_char(32);
-			txdata <= col(3, dot_char);                   
-		 WHEN 19 => -- 5
-			dot_char := get_dot_char(32);
-			txdata <= col(4, dot_char);                   
-		 WHEN 20 => -- 6
-			dot_char := get_dot_char(32);
-			txdata <= col(4, dot_char);                   
-		 WHEN 21 => -- 7
-			dot_char := get_dot_char(32);
-			txdata <= col(4, dot_char);                     
-		 WHEN 22 => -- 8 (decimal dot)			
-			txdata <= "01000000";                  
-		 WHEN 23 => -- NC
-			txdata <= "00000000";                    
-		 WHEN 24 => -- NC                              
-			txdata <= "00000000";
-		 WHEN 25 => -- NC                                 
-			txdata <= "00000000";                  
-		 WHEN 26 =>
-			ena <= '0';                -- end transmission to start a new one   		 		                 
-		 WHEN 27 =>
-			ena <= '1';                -- start new transmission	                  
-			txdata(7) <= '0';
-			txdata(6) <= '0';
-			txdata(5) <= '0';
-			txdata(4) <= '0';
-			txdata(3) <= '1';
-			txdata(2) <= '1';
-			txdata(1) <= '0';
-			txdata(0) <= '0';
-		 WHEN 28 =>
-			txdata <= "11111111";     -- latch LED values                   
-		 WHEN 29 =>
-			txdata <= "00000000";     -- led intensity 
-		 WHEN 30 =>
-			ena <= '0'; 
-		 WHEN 31 =>	
-			busy_cnt <= 0;
-		 WHEN OTHERS => NULL;
-	  END CASE;
-	end if;
-	end process fun;
-end stimulus;
+		end case;
+	end process comb_proc;
+end arch;

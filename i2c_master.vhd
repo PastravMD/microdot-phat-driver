@@ -37,8 +37,7 @@ entity i2c_master is
     data_rd   : out    std_logic_vector(7 downto 0); --data read from slave
     ack_error : buffer std_logic;                    --flag if improper acknowledge from slave
     sda       : inout  std_logic;                    --serial data output of i2c bus
-    scl       : inout  std_logic;                    --serial clock output of i2c bus
-    dbg_state : out    std_logic_vector(3 downto 0));
+    scl       : inout  std_logic);                   --serial clock output of i2c bus
 end i2c_master;
 
 architecture logic of i2c_master is
@@ -247,20 +246,7 @@ begin
     sda_ena_n <= data_clk_prev when start,     --generate start condition
                  not data_clk_prev when stop,  --generate stop condition
                  sda_int when others;          --set to internal sda signal 
-					  
-  -- ready, start, command, slv_ack1, wr, rd, slv_ack2, mstr_ack, stop
-  with state select
-    dbg_state <= "0000" when ready,
-                 "0001" when start,
-                 "0011" when command,
-                 "0111" when slv_ack1,
-                 "1111" when wr,
-                 "1110" when rd,
-                 "1100" when slv_ack2,
-                 "1000" when mstr_ack,
-                 "1001" when stop,
-                 "0000" when others;
-  
+ 
   --set scl and sda outputs
   scl <= '0' when (scl_ena = '1' and scl_clk = '0') else 'H';
   sda <= '0' when sda_ena_n = '0' else 'H';
