@@ -87,13 +87,12 @@ begin
 		
 		case ps is
 			when st_ready =>
-				nrst		<= '0';
+				nrst		<= '1';
 				if rising_edge(en_cmd) then
 					ns <= st_init_data_tx;
 				end if;
 			when st_init_data_tx =>
 				dot_char 	:= get_dot_char(char_code);
-				nrst		<= '1';
 				ena		<= '1';
 				rw		<= '0';
 				addr		<= std_logic_vector(to_unsigned(ltp_addr.i2c, 7));
@@ -128,7 +127,7 @@ begin
 				end if;
 			when st_byte_4 =>
 				txdata		<= dotline(dot_char, 4, ltp_addr.module);
-				if rising_edge(busy) then
+				if rising_edge(busy)  then
 					ns <= st_byte_5;
 				end if;
 			when st_byte_5 =>
@@ -162,6 +161,7 @@ begin
 				end if;
 			when st_finish =>
 				ena		<= '0';
+				nrst		<= '0';
 				ns <= st_ready;
 			when others => NULL;
 		end case;

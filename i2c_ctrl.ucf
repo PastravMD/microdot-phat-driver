@@ -1,11 +1,6 @@
 net	sclk		loc = a9;
 net	sda		loc = a2;
 net	scl		loc = b2;
-net	ack_err	loc = e1;
-
-net	dbg_st(0) loc = h2;
-net	dbg_st(1) loc = f2;
-net	dbg_st(2) loc = e2;
-net	dbg_st(3) loc = c1;
+net	en_dbg	loc = b1;
 
 

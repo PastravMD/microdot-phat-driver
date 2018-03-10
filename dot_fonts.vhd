@@ -3,8 +3,7 @@ use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
 package dot_fonts is
-	type dot_char_t is 
-		array (6 downto 0, 4 downto 0) of std_logic;
+	type dot_char_t is array (6 downto 0, 4 downto 0) of std_logic;
 
 	function get_dot_char(ascii_code : integer) return dot_char_t;
 	function col(x : integer; dots : dot_char_t) return std_logic_vector;
@@ -44,13 +43,20 @@ package body dot_fonts is
 
 	function col(x : integer; dots : dot_char_t) return std_logic_vector is
 	begin
-		return '0' & dots(6, x) & dots(5, x) & dots(4, x) & dots(3, x) & 
-			dots(2, x) & dots(1, x) & dots(0, x);
+		if x < 5 then
+			return '0' & dots(6, x) & dots(5, x) & dots(4, x) & dots(3, x) & dots(2, x) & dots(1, x) & dots(0, x);
+		else
+			return "00000000";
+		end if;
 	end function col;
 
 	function row(y : integer; dots : dot_char_t) return std_logic_vector is
 	begin
-		return "000" & dots(y, 4) & dots(y, 3) & dots(y, 2) & dots(y, 1) & dots(y, 0);
+		if y < 7 then
+			return "000" & dots(y, 4) & dots(y, 3) & dots(y, 2) & dots(y, 1) & dots(y, 0);
+		else
+			return "00000000";
+		end if;
 	end function row;
 
 	function dotline(dots : dot_char_t;
