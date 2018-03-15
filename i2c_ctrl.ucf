@@ -1,6 +1,20 @@
 net	sclk		loc = a9;
 net	sda		loc = a2;
 net	scl		loc = b2;
-net	en_dbg	loc = b1;
 
+net	dbg_busy	loc = e1;
+net	dbg_cmd		loc = c1;
 
+net	dbg_st(0)	loc = h2;
+net	dbg_st(1)	loc = f2;
+net	dbg_st(2)	loc = e2;
+net	dbg_st(3)	loc = b1;
+
+net	symbol(0)	loc = t4;
+net	symbol(1)	loc = r2;
+net	symbol(2)	loc = r1;
+net	symbol(3)	loc = m2;
+net	symbol(4)	loc = m1;
+net	symbol(5)	loc = k3;
+net	symbol(6)	loc = j4;
+net	symbol(7)	loc = h1;

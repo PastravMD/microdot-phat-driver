@@ -1,23 +1,3 @@
-----------------------------------------------------------------------------------
--- Company: 
--- Engineer: 
--- 
--- Create Date:    22:21:30 02/24/2018 
--- Design Name: 
--- Module Name:    i2c_master - Behavioral 
--- Project Name: 
--- Target Devices: 
--- Tool versions: 
--- Description: 
---
--- Dependencies: 
---
--- Revision: 
--- Revision 0.01 - File Created
--- Additional Comments: 
---
-----------------------------------------------------------------------------------
-
 library ieee;
 use ieee.std_logic_1164.all;
 use ieee.std_logic_unsigned.all;
@@ -25,7 +5,7 @@ use ieee.std_logic_unsigned.all;
 entity i2c_master is
   generic(
     input_clk : integer := 12_000_000; --input clock speed from user logic in hz
-    bus_clk   : integer := 200_000);   --speed the i2c bus (scl) will run at in hz
+    bus_clk   : integer := 100_000);   --speed the i2c bus (scl) will run at in hz
   port(
     clk       : in     std_logic;                    --system clock
     reset_n   : in     std_logic;                    --active low reset
@@ -37,7 +17,8 @@ entity i2c_master is
     data_rd   : out    std_logic_vector(7 downto 0); --data read from slave
     ack_error : buffer std_logic;                    --flag if improper acknowledge from slave
     sda       : inout  std_logic;                    --serial data output of i2c bus
-    scl       : inout  std_logic);                   --serial clock output of i2c bus
+    scl       : inout  std_logic;                    --serial clock output of i2c bus
+    dbg_state : out    std_logic_vector(3 downto 0));
 end i2c_master;
 
 architecture logic of i2c_master is
@@ -250,5 +231,18 @@ begin
   --set scl and sda outputs
   scl <= '0' when (scl_ena = '1' and scl_clk = '0') else 'H';
   sda <= '0' when sda_ena_n = '0' else 'H';
+
+   -- ready, start, command, slv_ack1, wr, rd, slv_ack2, mstr_ack, stop
+  with state select
+    dbg_state <= "0000" when ready,
+                 "0001" when start,
+                 "0011" when command,
+                 "0111" when slv_ack1,
+                 "1111" when wr,
+                 "1110" when rd,
+                 "1100" when slv_ack2,
+                 "1000" when mstr_ack,
+                 "1001" when stop,
+                 "0000" when others;
   
 end logic;
