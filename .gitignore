@@ -1,0 +1,7 @@
+# track the essentials
+
+*
+
+!*.vhd
+!*.ucf
+!.gitignore
