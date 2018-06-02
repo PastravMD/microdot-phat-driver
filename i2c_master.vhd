@@ -40,20 +40,20 @@ attribute mark_debug	:	string;
   signal data_rx       : std_logic_vector(7 downto 0);   --data received from slave
   signal bit_cnt       : integer range 0 to 7 := 7;      --tracks bit number in transaction
   signal stretch       : std_logic := '0';               --identifies if slave is stretching scl
-  
-attribute mark_debug of state : signal is "TRUE";  
-attribute mark_debug of data_clk : signal is "TRUE";  
-attribute mark_debug of data_clk_prev : signal is "TRUE";  
-attribute mark_debug of scl_clk : signal is "TRUE";  
-attribute mark_debug of scl_ena : signal is "TRUE";  
-attribute mark_debug of sda_int : signal is "TRUE";  
-attribute mark_debug of sda_ena_n : signal is "TRUE";  
-attribute mark_debug of addr_rw : signal is "TRUE";  
-attribute mark_debug of data_tx : signal is "TRUE";  
-attribute mark_debug of data_rx : signal is "TRUE";  
-attribute mark_debug of bit_cnt : signal is "TRUE";  
-attribute mark_debug of stretch : signal is "TRUE"; 
-  
+
+attribute mark_debug of state : signal is "TRUE";
+attribute mark_debug of data_clk : signal is "TRUE";
+attribute mark_debug of data_clk_prev : signal is "TRUE";
+attribute mark_debug of scl_clk : signal is "TRUE";
+attribute mark_debug of scl_ena : signal is "TRUE";
+attribute mark_debug of sda_int : signal is "TRUE";
+attribute mark_debug of sda_ena_n : signal is "TRUE";
+attribute mark_debug of addr_rw : signal is "TRUE";
+attribute mark_debug of data_tx : signal is "TRUE";
+attribute mark_debug of data_rx : signal is "TRUE";
+attribute mark_debug of bit_cnt : signal is "TRUE";
+attribute mark_debug of stretch : signal is "TRUE";
+
 begin
 
   --generate the timing for the bus clock (scl_clk) and the data clock (data_clk)
@@ -188,17 +188,17 @@ begin
                 state <= rd;                 --go to read byte
               else                           --continue transaction with a write or new slave
                 state <= start;              --repeated start
-              end if;    
+              end if;
             else                             --complete transaction
               state <= stop;                 --go to stop bit
             end if;
           when stop =>                       --stop bit of transaction
             busy <= '0';                     --unflag busy
             state <= ready;                  --go to idle state
-        end case;    
+        end case;
       elsif(data_clk = '0' and data_clk_prev = '1') then  --data clock falling edge
         case state is
-          when start =>                  
+          when start =>
             if(scl_ena = '0') then                  --starting new transaction
               scl_ena <= '1';                       --enable scl output
               ack_error <= '0';                     --reset acknowledge error output
@@ -220,14 +220,14 @@ begin
         end case;
       end if;
     end if;
-  end process;  
+  end process;
 
   --set sda output
   with state select
     sda_ena_n <= data_clk_prev when start,     --generate start condition
                  not data_clk_prev when stop,  --generate stop condition
-                 sda_int when others;          --set to internal sda signal 
- 
+                 sda_int when others;          --set to internal sda signal
+
   --set scl and sda outputs
   scl <= '0' when (scl_ena = '1' and scl_clk = '0') else 'H';
   sda <= '0' when sda_ena_n = '0' else 'H';
@@ -244,5 +244,5 @@ begin
                  "1000" when mstr_ack,
                  "1001" when stop,
                  "0000" when others;
-  
+
 end logic;

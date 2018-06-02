@@ -4,17 +4,10 @@ use ieee.numeric_std.all;
 use work.dot_fonts.all;
 use work.ltp305.all;
 
-entity IS31FL3730_driver is
---	generic	();
-	port (	sclk		: in	std_logic;
-		char_code 	: in	integer;
-		dec_dot		: in	std_logic;
-		ltp_addr	: in	ltp_addr_t;
-		en_cmd		: in	std_logic;
-		sda		: inout std_logic;
-		scl		: inout std_logic;
-		dbg_busy	: out	std_logic;
-		dbg_st		: out	std_logic_vector (3 downto 0));
+entity dotmatrix_ctrl is
+	port (
+	      char_code 	: in	integer;
+	      display_id	: in	ltp_addr_t;
 end IS31FL3730_driver;
 
 architecture arch of IS31FL3730_driver is 
