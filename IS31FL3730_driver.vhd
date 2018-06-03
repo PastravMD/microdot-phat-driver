@@ -5,22 +5,27 @@ use work.dot_fonts.all;
 use work.ltp305.all;
 
 entity IS31FL3730_driver is
---	generic	();
-	port (	sclk		: in	std_logic;
-		char_code 	: in	integer;
-		dec_dot		: in	std_logic;
-		ltp_addr	: in	ltp_addr_t;
-		en_cmd		: in	std_logic;
-		sda		: inout std_logic;
-		scl		: inout std_logic;
-		dbg_busy	: out	std_logic;
-		dbg_st		: out	std_logic_vector (3 downto 0));
-end IS31FL3730_driver;
+	port (sclk:		in std_logic; -- FIXME: needs clock ?
+	      kick_cmd:		in std_logic;
+	      i2c_addr:		in natural;
+	      module_sel:	in std_logic;
+	      dot_matrix:	in dot_matrix_t;
 
-architecture arch of IS31FL3730_driver is 
-	type ltp_update_state is (st_ready, st_init_data_tx, st_byte_0, st_byte_1, st_byte_2, st_byte_3, st_byte_4, st_byte_5, 
+	      reset_n:		out std_logic;
+	      ena:		out std_logic;
+	      addr:		out std_logic_vector(6 downto 0);
+	      rw:		out std_logic;
+	      data_wr:		out std_logic_vector(7 downto 0);
+	      busy:		out std_logic;
+	      ack_error:	buffer std_logic;
+	      sda:		inout  std_logic;
+	      scl:		inout  std_logic);
+	end IS31FL3730_driver;
+
+architecture arch of IS31FL3730_driver is
+	type display_update_state is (st_ready, st_init_data_tx, st_byte_0, st_byte_1, st_byte_2, st_byte_3, st_byte_4, st_byte_5, 
 					st_byte_6, st_byte_7, st_end_data_tx, st_init_update, st_update_latch, st_finish);
-	signal ns, ps		: ltp_update_state := st_ready;
+	signal ns, ps		: display_update_state := st_ready;
 	signal nrst		: std_logic;
 	signal ena		: std_logic;
 	signal rw		: std_logic;
