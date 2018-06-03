@@ -1,224 +1,64 @@
+----------------------------------------------------------------------------------------------------
+-- display matrix module specifics
+----------------------------------------------------------------------------------------------------
+
 library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 use work.dot_fonts.all;
-use work.ltp305.all;
 
-entity dotmatrix_ctrl is
-	port (
-	      char_code 	: in	integer;
-	      display_id	: in	ltp_addr_t;
-end IS31FL3730_driver;
+entity dot_matrix_ctrl is
+	port(symbol_code:	in natural;
+	     module_id:		in natural;
+	     kick_cmd:		in std_logic;
+	     valid_kick:	out std_logic;
+	     dot_matrix:	out dot_matrix_t;
+	     i2c_addr:		out natural;
+	     module_sel:	out std_logic);
+end dot_matrix_ctrl;
 
-architecture arch of IS31FL3730_driver is 
-	type ltp_update_state is (st_ready, st_init_data_tx, st_byte_0, st_byte_1, st_byte_2, st_byte_3, st_byte_4, st_byte_5, 
-					st_byte_6, st_byte_7, st_end_data_tx, st_init_update, st_update_latch, st_finish);
-	signal ns, ps		: ltp_update_state := st_ready;
-	signal nrst		: std_logic;
-	signal ena		: std_logic;
-	signal rw		: std_logic;
-	signal addr		: std_logic_vector(6 downto 0); 
-	signal txdata		: std_logic_vector(7 downto 0);
-	signal rxdata		: std_logic_vector(7 downto 0);
-	signal ack_t		: std_logic;
-	signal busy       	: std_logic;
-	signal dbg_st_dummy	: std_logic_vector(3 downto 0);
-		
-	attribute mark_debug	: string;
-	attribute keep		: string;
-	attribute dont_touch	: string;
 
-	attribute mark_debug of nrst : signal is "TRUE";
-	attribute mark_debug of ena : signal is "TRUE";
-	attribute mark_debug of rw : signal is "TRUE";
-	attribute mark_debug of addr : signal is "TRUE";
-	attribute mark_debug of txdata : signal is "TRUE";
-	attribute mark_debug of rxdata : signal is "TRUE";
-	attribute mark_debug of ack_t : signal is "TRUE";
-	
-	attribute mark_debug of sclk : signal is "TRUE";
-	attribute mark_debug of scl : signal is "TRUE";
-	attribute mark_debug of sda : signal is "TRUE";
-	attribute mark_debug of busy : signal is "TRUE";
-	attribute mark_debug of dbg_st : signal is "TRUE";
-	attribute mark_debug of dbg_st_dummy : signal is "TRUE";
-
-	attribute keep of nrst : signal is "TRUE";
-	attribute keep of ena : signal is "TRUE";
-	attribute keep of rw : signal is "TRUE";
-	attribute keep of addr : signal is "TRUE";
-	attribute keep of txdata : signal is "TRUE";
-	attribute keep of rxdata : signal is "TRUE";
-	attribute keep of ack_t : signal is "TRUE";
-	
-	attribute keep of sclk : signal is "TRUE";
-	attribute keep of scl : signal is "TRUE";
-	attribute keep of sda : signal is "TRUE";
-	attribute keep of busy : signal is "TRUE";
-	attribute keep of dbg_st : signal is "TRUE";
-	attribute keep of dbg_st_dummy : signal is "TRUE";
-
-	attribute dont_touch of nrst : signal is "TRUE";
-	attribute dont_touch of ena : signal is "TRUE";
-	attribute dont_touch of rw : signal is "TRUE";
-	attribute dont_touch of addr : signal is "TRUE";
-	attribute dont_touch of txdata : signal is "TRUE";
-	attribute dont_touch of rxdata : signal is "TRUE";
-	attribute dont_touch of ack_t : signal is "TRUE";
-	
-	attribute dont_touch of sclk : signal is "TRUE";
-	attribute dont_touch of scl : signal is "TRUE";
-	attribute dont_touch of sda : signal is "TRUE";
-	attribute dont_touch of busy : signal is "TRUE";
-	attribute dont_touch of dbg_st : signal is "TRUE";
-	attribute dont_touch of dbg_st_dummy : signal is "TRUE";
-
-	component i2c_master
-		generic(	input_clk : integer := 12_000_000; --input clock speed from user logic in hz
-				bus_clk   : integer := 100_000);   --speed the i2c bus (scl) will run at in hz	
-
-		port(	clk       : in     std_logic;                    --system clock
-			reset_n   : in     std_logic;                    --active low reset
-			ena       : in     std_logic;                    --latch in command
-			addr      : in     std_logic_vector(6 downto 0); --address of target slave
-			rw        : in     std_logic;                    --'0' is write, '1' is read
-			data_wr   : in     std_logic_vector(7 downto 0); --data to write to slave
-			busy      : out    std_logic;                    --indicates transaction in progress
-			data_rd   : out    std_logic_vector(7 downto 0); --data read from slave
-			ack_error : buffer std_logic;                    --flag if improper acknowledge from slave
-			sda       : inout  std_logic;                    --serial data output of i2c bus
-			scl       : inout  std_logic;                   --serial clock output of i2c bus
-		 	dbg_state : out std_logic_vector(3 downto 0));
-	end component;
-
+architecture arch of dot_matrix_ctrl is
+	signal symbol_valid:	std_logic;
+	signal module_valid:	std_logic;
 begin
-	i2c_controller: i2c_master
-	generic map (12_000_000, 100_000)
-	port map(	clk		=> sclk,
-			reset_n 	=> nrst,
-			ena		=> ena,
-			addr		=> addr,
-			rw		=> rw,
-			data_wr		=> txdata,
-			data_rd		=> rxdata,
-			busy		=> busy,
-			ack_error	=> ack_t,
-			sda		=> sda, 
-			scl		=> scl,
-                	dbg_state	=> dbg_st_dummy);
-	
-	dbg_busy <= busy;
 
-	sync_proc: process(sclk, ns)
+	-- propagate the kick signal only if the inputs are valid
+	validate_kick: process(kick_cmd)
 	begin
-		if (rising_edge(sclk)) then
-			ps <= ns;
+		if rising_edge(kick_cmd) and (symbol_valid = '1') and ( module_valid = '1') then
+			valid_kick <= '1';
+		else
+			valid_kick <= '0';
 		end if;
-	end process sync_proc;
+	end process validate_kick;
 
-	comb_proc: process(ps, en_cmd, busy)
-		variable dot_char : dot_matrix_t;
+	-- translate a character code (like ASCII) into a matrix of binary values
+	symbol_translate: process(symbol_code)
 	begin
-		case ps is
-			when st_ready =>
-				nrst		<= '0';
-				if en_cmd = '1' then
-					ns	<= st_init_data_tx;
-				end if;
-			when st_init_data_tx =>
-				dot_char 	:= get_dot_char(char_code);
-				nrst		<= '1';
-				ena		<= '1';
-				rw		<= '0';
-				addr		<= std_logic_vector(to_unsigned(ltp_addr.i2c, 7));
-				if ltp_addr.module = '0' then
-					txdata <= "00000001"; -- 0x1 mat 1 data reg address
-				else
-					txdata <= "00001110"; -- 0xE mat 2 data reg address
-				end if;
+		dot_matrix <= get_dot_char(symbol_code);
+		if symbol_code < 33 then
+			symbol_valid <= '1';
+		else
+			symbol_valid <= '0';
+		end if;
+	end process symbol_translate;
 
-				if busy = '0' then
-					ns <= st_byte_0;
-				end if;
-			when st_byte_0 =>
-				txdata		<= get_char_line(dot_char, 0, ltp_addr.module);
-				if busy = '0' then
-					ns <= st_byte_1;
-				end if;
-			when st_byte_1 =>
-				txdata		<= get_char_line(dot_char, 1, ltp_addr.module);
-				if busy = '0' then
-					ns <= st_byte_2;
-				end if;
-			when st_byte_2 =>
-				txdata		<= get_char_line(dot_char, 2, ltp_addr.module);
-				if busy = '0' then
-					ns <= st_byte_3;
-				end if;
-			when st_byte_3 =>
-				txdata		<= get_char_line(dot_char, 3, ltp_addr.module);
-				if busy = '0' then
-					ns <= st_byte_4;
-				end if;
-			when st_byte_4 =>
-				txdata		<= get_char_line(dot_char, 4, ltp_addr.module);
-				if busy = '0' then
-					ns <= st_byte_5;
-				end if;
-			when st_byte_5 =>
-				txdata		<= get_char_line(dot_char, 5, ltp_addr.module);
-				if busy = '0' then
-					ns <= st_byte_6;
-				end if;
-			when st_byte_6 =>
-				txdata		<= get_char_line(dot_char, 6, ltp_addr.module);
-				if busy = '0' then
-					ns <= st_byte_7;
-				end if;
-			when st_byte_7 =>
-				txdata		<= get_char_line(dot_char, 7, ltp_addr.module);
-				if busy = '0' then
-					ns <= st_end_data_tx;
-				end if;
-			when st_end_data_tx =>
-				ena		<= '0';
-				ns <= st_init_update;
-			when st_init_update =>
-				ena		<= '1';
-				txdata <= "00001100"; -- 0xC update reg address
-				if busy = '0' then
-					ns <= st_update_latch;
-				end if;
-			when st_update_latch =>
-				txdata <= "11111111";
-				if busy = '0' then
-					ns <= st_finish;
-				end if;
-			when st_finish =>
-				ena		<= '0';
-				nrst		<= '0';
-				ns <= st_ready;
-			when others => NULL;
+	-- address the n-th LTP305 module using the i2c address of the IS31FL27 LED controller that
+	-- drives it and a binary value that indicates which of the 2 modules is driven
+	-- NB: valid module numbers are 1 to 6, everything else including 0 are ignored
+	id_translate: process(module_id)
+	begin
+		module_valid <= '1';
+		case (module_id) is
+			when 1 => i2c_addr <= 16#61#; module_sel <= '0';
+			when 2 => i2c_addr <= 16#61#; module_sel <= '1';
+			when 3 => i2c_addr <= 16#62#; module_sel <= '0';
+			when 4 => i2c_addr <= 16#62#; module_sel <= '1';
+			when 5 => i2c_addr <= 16#63#; module_sel <= '0';
+			when 6 => i2c_addr <= 16#63#; module_sel <= '1';
+			when others => module_valid <= '0';
 		end case;
-	end process comb_proc;
-
-   -- st_ready, st_init_data_tx, st_byte_0, st_byte_1, st_byte_2, st_byte_3, st_byte_4, st_byte_5, 
-   -- st_byte_6, st_byte_7, st_end_data_tx, st_init_update, st_update_latch, st_finish  
-   with ps select
-     dbg_st   <= "0001" when st_ready,
-                 "0010" when st_init_data_tx,
-		 "0011" when st_byte_0,
-		 "0100" when st_byte_1,
-		 "0101" when st_byte_2,
-		 "0110" when st_byte_3,
-		 "0111" when st_byte_4,
-		 "1000" when st_byte_5,
-		 "1001" when st_byte_6,
-		 "1010" when st_byte_7,
-		 "1011" when st_end_data_tx,
-		 "1100" when st_init_update,
-		 "1101" when st_update_latch,
-                 "1110" when st_finish,
-		 "1111" when others;
-
+	end process id_translate;
 end arch;
+
