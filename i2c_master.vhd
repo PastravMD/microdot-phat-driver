@@ -1,47 +1,30 @@
-----------------------------------------------------------------------------------
--- Company: 
--- Engineer: 
--- 
--- Create Date:    22:21:30 02/24/2018 
--- Design Name: 
--- Module Name:    i2c_master - Behavioral 
--- Project Name: 
--- Target Devices: 
--- Tool versions: 
--- Description: 
+--------------------------------------------------------------------------------
 --
--- Dependencies: 
+--   FileName:         i2c_master.vhd
 --
--- Revision: 
--- Revision 0.01 - File Created
--- Additional Comments: 
+--   HDL CODE IS PROVIDED "AS IS."  DIGI-KEY EXPRESSLY DISCLAIMS ANY
+--   WARRANTY OF ANY KIND, WHETHER EXPRESS OR IMPLIED, INCLUDING BUT NOT
+--   LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY, FITNESS FOR A
+--   PARTICULAR PURPOSE, OR NON-INFRINGEMENT. IN NO EVENT SHALL DIGI-KEY
+--   BE LIABLE FOR ANY INCIDENTAL, SPECIAL, INDIRECT OR CONSEQUENTIAL
+--   DAMAGES, LOST PROFITS OR LOST DATA, HARM TO YOUR EQUIPMENT, COST OF
+--   PROCUREMENT OF SUBSTITUTE GOODS, TECHNOLOGY OR SERVICES, ANY CLAIMS
+--   BY THIRD PARTIES (INCLUDING BUT NOT LIMITED TO ANY DEFENSE THEREOF),
+--   ANY CLAIMS FOR INDEMNITY OR CONTRIBUTION, OR OTHER SIMILAR COSTS.
 --
-----------------------------------------------------------------------------------
+--   Version History
+--   Version 1.0 11/1/2012 Scott Larson
+--     Initial Public Release
+--   Version 2.0 06/20/2014 Scott Larson
+--     Added ability to interface with different slaves in the same transaction
+--     Corrected ack_error bug where ack_error went 'Z' instead of '1' on error
+--     Corrected timing of when ack_error signal clears
+--
+--------------------------------------------------------------------------------
 
 library ieee;
 use ieee.std_logic_1164.all;
 use ieee.std_logic_unsigned.all;
-
-entity i2c_master is
-  generic(
-    input_clk : integer := 12_000_000; --input clock speed from user logic in hz
-    bus_clk   : integer := 200_000);   --speed the i2c bus (scl) will run at in hz
-  port(
-    clk       : in     std_logic;                    --system clock
-    reset_n   : in     std_logic;                    --active low reset
-    ena       : in     std_logic;                    --latch in command
-    addr      : in     std_logic_vector(6 downto 0); --address of target slave
-    rw        : in     std_logic;                    --'0' is write, '1' is read
-    data_wr   : in     std_logic_vector(7 downto 0); --data to write to slave
-    busy      : out    std_logic;                    --indicates transaction in progress
-    data_rd   : out    std_logic_vector(7 downto 0); --data read from slave
-    ack_error : buffer std_logic;                    --flag if improper acknowledge from slave
-    sda       : inout  std_logic;                    --serial data output of i2c bus
-    scl       : inout  std_logic;                    --serial clock output of i2c bus
-    dbg_state : out    std_logic_vector(3 downto 0));
-end i2c_master;
-
-architecture logic of i2c_master is
 
 attribute keep		:	string;
 attribute mark_debug	:	string;
