@@ -7,10 +7,10 @@ use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 use work.dot_fonts.all;
 
-entity testbench is
-end testbench;
+entity dot_matrix_testbench is
+end dot_matrix_testbench;
 
-architecture behavior of testbench is 
+architecture behavior of dot_matrix_testbench is 
 
 	component dot_matrix_ctrl
 		port(symbol_code:	in natural;
