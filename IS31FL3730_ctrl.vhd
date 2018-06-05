@@ -5,7 +5,7 @@ use ieee.numeric_std.all;
 use work.dot_fonts.all;
 
 entity IS31FL3730_ctrl is
-	port (sclk:		in std_logic; -- FIXME: needs clock ?
+	port (sclk:		in std_logic;
 	      kick_cmd:		in std_logic;
 	      i2c_addr:		in natural;
 	      module_sel:	in std_logic;
@@ -26,7 +26,7 @@ architecture arch of IS31FL3730_ctrl is
 	type display_update_state is (st_ready, st_init_data_tx, st_byte_0, st_byte_1, st_byte_2, st_byte_3, st_byte_4, st_byte_5,
 					st_byte_6, st_byte_7, st_end_data_tx, st_init_update, st_update_latch, st_finish);
 
-	signal ns, ps		: display_update_state;-- := st_ready;
+	signal ns, ps		: display_update_state;
 
 	-- local signals required to latch input values when kicked
 	signal active_i2c_addr:	natural;
@@ -46,10 +46,12 @@ begin
 			when st_ready =>
 				reset_n		<= '0';
 				if kick_cmd = '1' then
-					ns	<= st_init_data_tx; -- FIXME: make function for advancing the state ?
+					ns		<= st_init_data_tx; -- FIXME: make function for advancing the state ?
+					active_symbol	<= dot_matrix;
+					active_i2c_addr	<= i2c_addr;
+					active_module 	<= module_sel;
 				end if;
 			when st_init_data_tx =>
-				active_symbol	<= dot_matrix;
 				reset_n		<= '1';
 				ena		<= '1';
 				rw		<= '0';
@@ -126,22 +128,4 @@ begin
 		end case;
 	end process comb_proc;
 
-   -- st_ready, st_init_data_tx, st_byte_0, st_byte_1, st_byte_2, st_byte_3, st_byte_4, st_byte_5, 
-   -- st_byte_6, st_byte_7, st_end_data_tx, st_init_update, st_update_latch, st_finish  
---   with ps select
---     dbg_st   <= "0001" when st_ready,
---                 "0010" when st_init_data_tx,
---		 "0011" when st_byte_0,
---		 "0100" when st_byte_1,
---		 "0101" when st_byte_2,
---		 "0110" when st_byte_3,
---		 "0111" when st_byte_4,
---		 "1000" when st_byte_5,
---		 "1001" when st_byte_6,
---		 "1010" when st_byte_7,
---		 "1011" when st_end_data_tx,
---		 "1100" when st_init_update,
---		 "1101" when st_update_latch,
---                 "1110" when st_finish,
---		 "1111" when others;
 end arch;

@@ -43,6 +43,7 @@ architecture behavior of IS31FL3730_testbench is
 	signal sda:		std_logic := '0';
 	signal scl:		std_logic := '0';
 	signal sym_code:	natural := 0;
+	signal clk_cnt:		natural := 0;
 
 begin
 
@@ -63,55 +64,55 @@ uut: IS31FL3730_ctrl
 		  sda => sda,
 		  scl => scl);
 
+	dot_matrix <= get_dot_char(sym_code);
 
 	clk_gen : process
 	begin
 		wait for 1 ns;
 		if sclk = '0' then
 			sclk <= '1';
+			clk_cnt <= clk_cnt + 1;
 		else
 			sclk <= '0';
 		end if;
 	end process clk_gen;
 
-	kick_gen : process
-	begin
-		wait for 1 ns;
-		if kick_cmd = '0' then
-			kick_cmd <= '1';
-		else
-			kick_cmd <= '0';
-			wait for 299 ns;
-		end if;
-	end process kick_gen;
+	-- generate kick pulse
+	kick_cmd <= '1' when (clk_cnt rem 20 = 0) else
+		    '0';
 
-	content_gen : process
+	-- run through all symbols
+	symbol_gen : process(clk_cnt)
 	begin
-		wait for 300 ns;
-		if sym_code > 34 then
-			sym_code <= 0;
-		else
-			sym_code <= sym_code + 1;
+		if (clk_cnt rem 80 = 0) then
+			if sym_code > 34 then
+				sym_code <= 0;
+			else
+				sym_code <= sym_code + 1;
+			end if;
 		end if;
-		dot_matrix <= get_dot_char(sym_code);
+	end process symbol_gen;
 
-		if (sym_code rem 2 = 1) then
-			module_sel <= '1';
-		else
-			module_sel <= '0';
+	-- cycle both dot matrices connected to each controller
+	matrix_module_select : process(clk_cnt)
+	begin
+		if (clk_cnt rem 20 = 0) then
+			module_sel <= not module_sel;
 		end if;
-	end process content_gen;
+	end process matrix_module_select;
+
+	-- cycle through all 3 controller addresses
+	i2c_addr <= 16#61# + (clk_cnt rem 3) when (clk_cnt rem 40 = 0);
 
 	-- keep the busy line asserted for 1 clk cycle
 	i2c_finish : process(ena, sclk)
 	begin
-		if rising_edge(ena) then
-			device_busy <= '1';
-		elsif device_busy = '1' then
-			device_busy <= '0';
+		if ena = '1' then
+			if falling_edge(sclk) then
+				device_busy <= '1';
+			else
+				device_busy <= '0';
+			end if;
 		end if;
 	end process i2c_finish;
 end;
-
-
-
