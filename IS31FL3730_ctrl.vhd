@@ -17,9 +17,7 @@ entity IS31FL3730_ctrl is
 	      addr:		out std_logic_vector(6 downto 0);
 	      rw:		out std_logic;
 	      txdata:		out std_logic_vector(7 downto 0);
-	      ack_error:	buffer std_logic;
-	      sda:		inout  std_logic;
-	      scl:		inout  std_logic);
+	      ack_error:	buffer std_logic);
 	end IS31FL3730_ctrl;
 
 architecture arch of IS31FL3730_ctrl is
