@@ -59,7 +59,10 @@ begin
 			when 4 => i2c_addr <= 16#62#; module_sel <= '1';
 			when 5 => i2c_addr <= 16#63#; module_sel <= '0';
 			when 6 => i2c_addr <= 16#63#; module_sel <= '1';
-			when others => module_valid <= '0';
+			when others =>
+				module_valid	<= '0';
+				i2c_addr	<= 0;
+				module_sel 	<= '0';
 		end case;
 	end process id_translate;
 end arch;

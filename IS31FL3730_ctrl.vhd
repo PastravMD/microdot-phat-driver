@@ -31,14 +31,16 @@ architecture arch of IS31FL3730_ctrl is
 	signal active_module:	std_logic;
 	signal active_symbol:	dot_matrix_t;
 begin
-	sync_proc: process(sclk, ns)
+	sync_proc: process(sclk)
 	begin
-		if (rising_edge(sclk)) then
+		if rising_edge(sclk) then
 			ps <= ns;
 		end if;
 	end process sync_proc;
 
-	comb_proc: process(ps, kick_cmd, device_busy)
+	comb_proc: process(ps, kick_cmd, device_busy,
+			   dot_matrix, i2c_addr, module_sel,
+			   active_i2c_addr, active_module, active_symbol)
 	begin
 		case ps is
 			when st_ready =>
@@ -120,8 +122,6 @@ begin
 			when st_finish =>
 				ena		<= '0';
 				reset_n		<= '0';
-				ns <= st_ready;
-			when others =>
 				ns <= st_ready;
 		end case;
 	end process comb_proc;
