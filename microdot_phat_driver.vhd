@@ -11,11 +11,11 @@ end microdot_phat_driver;
 
 architecture behavior of microdot_phat_driver is
 	-- simulate external inputs
-	signal clk_cnt:		natural := 0;
+	signal clk_cnt:		natural;
 	-- dot matrix controller
-	signal sym_code:	integer;
+	signal sym_code:	natural;
 	signal module_id:	natural;
-	signal kick_cmd:	std_logic := '1';
+	signal kick_cmd:	std_logic;
 	-- is31fl3730 controller
 	signal valid_kick:	std_logic;
 	signal i2c_addr:	natural;
@@ -110,7 +110,11 @@ begin
 	clk_counter: process(sclk) is
 	begin
 		if rising_edge(sclk) then
-			clk_cnt <= clk_cnt + 1;
+			if clk_cnt < (natural'high - 1) then
+				clk_cnt <= clk_cnt + 1;
+			else
+				clk_cnt <= 0;
+			end if;
 		end if;
 	end process clk_counter;
 
@@ -118,7 +122,7 @@ begin
 	symbol_gen : process(kick_cmd)
 	begin
 		if falling_edge(kick_cmd) then
-			if sym_code > 34 then
+			if sym_code > 50 then
 				sym_code <= 0;
 			else
 				sym_code <= sym_code + 1;
@@ -126,25 +130,14 @@ begin
 		end if;
 	end process symbol_gen;
 
-	select_module: process(kick_cmd)
-	begin
-		-- module_sel = unsigned(sym_code rem 2);
-		if sym_code rem 2 = 0 then
-			module_sel <= '0';
-		else
-			module_sel <= '1';
-		end if;
-
-	i2c_addr <= 16#61# + (sym_code rem 3);
-
-	end process select_module;
+	module_id <= (sym_code rem 7);
 
 	kick_gen: process (clk_cnt) is
 	begin
-		if (clk_cnt mod 36_000_000 /= 0) then 
-			kick_cmd <= '1';
-		else
+		if (clk_cnt mod 136 /= 0) then 
 			kick_cmd <= '0';
+		else
+			kick_cmd <= '1';
 		end if;
 	end process kick_gen;
 

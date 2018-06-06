@@ -26,10 +26,12 @@ begin
 	-- propagate the kick signal only if the inputs are valid
 	validate_kick: process(kick_cmd)
 	begin
-		if rising_edge(kick_cmd) and (symbol_valid = '1') and ( module_valid = '1') then
-			valid_kick <= '1';
-		else
-			valid_kick <= '0';
+		if rising_edge(kick_cmd) then
+			if (symbol_valid = '1') and (module_valid = '1') then
+				valid_kick <= '1';
+			else
+				valid_kick <= '0';
+			end if;
 		end if;
 	end process validate_kick;
 
@@ -37,7 +39,7 @@ begin
 	symbol_translate: process(symbol_code)
 	begin
 		dot_matrix <= get_dot_char(symbol_code);
-		if symbol_code < 33 then
+		if symbol_code < 50 then
 			symbol_valid <= '1';
 		else
 			symbol_valid <= '0';

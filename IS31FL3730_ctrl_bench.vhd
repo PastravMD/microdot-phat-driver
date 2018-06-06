@@ -23,9 +23,7 @@ architecture behavior of IS31FL3730_testbench is
 		      addr:		out std_logic_vector(6 downto 0);
 		      rw:		out std_logic;
 		      txdata:		out std_logic_vector(7 downto 0);
-		      ack_error:	buffer std_logic;
-		      sda:		inout  std_logic;
-		      scl:		inout  std_logic);
+		      ack_error:	buffer std_logic);
 	end component;
 
 	signal sclk:		std_logic := '0';
@@ -40,8 +38,6 @@ architecture behavior of IS31FL3730_testbench is
 	signal rw:		std_logic := '0';
 	signal txdata:		std_logic_vector(7 downto 0) := "00000000";
 	signal ack_error:	std_logic := '0';
-	signal sda:		std_logic := '0';
-	signal scl:		std_logic := '0';
 	signal sym_code:	natural := 0;
 	signal clk_cnt:		natural := 0;
 
@@ -60,9 +56,7 @@ uut: IS31FL3730_ctrl
 		  addr => addr,
 		  rw => rw,
 		  txdata => txdata,
-		  ack_error => ack_error,
-		  sda => sda,
-		  scl => scl);
+		  ack_error => ack_error);
 
 	dot_matrix <= get_dot_char(sym_code);
 
