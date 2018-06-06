@@ -24,12 +24,36 @@ architecture arch of IS31FL3730_ctrl is
 	type display_update_state is (st_ready, st_init_data_tx, st_byte_0, st_byte_1, st_byte_2, st_byte_3, st_byte_4, st_byte_5,
 					st_byte_6, st_byte_7, st_end_data_tx, st_init_update, st_update_latch, st_finish);
 
+attribute keep    :  string;
+attribute mark_debug  :  string;
+attribute dont_touch  :  string;
+
 	signal ns, ps		: display_update_state;
 
 	-- local signals required to latch input values when kicked
 	signal active_i2c_addr:	natural;
 	signal active_module:	std_logic;
 	signal active_symbol:	dot_matrix_t;
+
+attribute mark_debug of ns : signal is "TRUE";  
+attribute mark_debug of ps : signal is "TRUE"; 
+attribute mark_debug of active_i2c_addr : signal is "TRUE";
+attribute mark_debug of active_module : signal is "TRUE";  
+attribute mark_debug of active_symbol : signal is "TRUE";  
+
+attribute keep of ns : signal is "TRUE";  
+attribute keep of ps : signal is "TRUE"; 
+attribute keep of active_i2c_addr : signal is "TRUE";
+attribute keep of active_module : signal is "TRUE";  
+attribute keep of active_symbol : signal is "TRUE";  
+
+attribute dont_touch of ns : signal is "TRUE";  
+attribute dont_touch of ps : signal is "TRUE"; 
+attribute dont_touch of active_i2c_addr : signal is "TRUE";
+attribute dont_touch of active_module : signal is "TRUE";  
+attribute dont_touch of active_symbol : signal is "TRUE";  
+
+
 begin
 	sync_proc: process(sclk)
 	begin
