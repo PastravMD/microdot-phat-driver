@@ -2,8 +2,11 @@
 
 *
 
+!.gitignore
 !LICENSE
 !README.md
 !*.vhd
 !*.ucf
-!.gitignore
+
+# project config file
+!*.xise

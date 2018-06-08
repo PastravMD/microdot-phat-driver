@@ -1,11 +1,21 @@
 net	sclk		loc = a9;
 net	sda		loc = a2;
 net	scl		loc = b2;
-net	ack_err	loc = e1;
 
-net	dbg_st(0) loc = h2;
-net	dbg_st(1) loc = f2;
-net	dbg_st(2) loc = e2;
-net	dbg_st(3) loc = c1;
+net  kick_cmd		loc = r2;
+net  valid_kick		loc = m2;
+net  module_sel		loc = k3;
 
+net  dbg_i2c_addr(0)		loc = t4;
+net  dbg_i2c_addr(1)		loc = r1;
+net  dbg_i2c_addr(2)		loc = m1;
+net  dbg_i2c_addr(3)		loc = j4;
+net  dbg_i2c_addr(4)		loc = f1;
+net  dbg_i2c_addr(5)		loc = e1;
+net  dbg_i2c_addr(6)		loc = c1;
+
+
+net  dbg_module_id(0)		loc = h2;
+net  dbg_module_id(1)		loc = f2;
+net  dbg_module_id(2)		loc = e2;
 

@@ -26,8 +26,30 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.std_logic_unsigned.all;
 
-attribute keep		:	string;
-attribute mark_debug	:	string;
+entity i2c_master is
+  generic(
+    input_clk : integer := 12_000_000; --input clock speed from user logic in hz
+    bus_clk   : integer := 100_000);   --speed the i2c bus (scl) will run at in hz
+  port(
+    clk       : in     std_logic;                    --system clock
+    reset_n   : in     std_logic;                    --active low reset
+    ena       : in     std_logic;                    --latch in command
+    addr      : in     std_logic_vector(6 downto 0); --address of target slave
+    rw        : in     std_logic;                    --'0' is write, '1' is read
+    data_wr   : in     std_logic_vector(7 downto 0); --data to write to slave
+    busy      : out    std_logic;                    --indicates transaction in progress
+    data_rd   : out    std_logic_vector(7 downto 0); --data read from slave
+    ack_error : buffer std_logic;                    --flag if improper acknowledge from slave
+    sda       : inout  std_logic;                    --serial data output of i2c bus
+    scl       : inout  std_logic;                    --serial clock output of i2c bus
+    dbg_state : out    std_logic_vector(3 downto 0));
+end i2c_master;
+
+architecture logic of i2c_master is
+
+attribute keep    :  string;
+attribute dont_touch  :  string;
+attribute mark_debug  :  string;
 
   constant divider  :  integer := (input_clk/bus_clk)/4; --number of clocks in 1/4 cycle of scl
   type machine is(ready, start, command, slv_ack1, wr, rd, slv_ack2, mstr_ack, stop); --needed states
@@ -43,7 +65,7 @@ attribute mark_debug	:	string;
   signal data_rx       : std_logic_vector(7 downto 0);   --data received from slave
   signal bit_cnt       : integer range 0 to 7 := 7;      --tracks bit number in transaction
   signal stretch       : std_logic := '0';               --identifies if slave is stretching scl
-  
+
 attribute mark_debug of state : signal is "TRUE";  
 attribute mark_debug of data_clk : signal is "TRUE";  
 attribute mark_debug of data_clk_prev : signal is "TRUE";  
@@ -56,7 +78,34 @@ attribute mark_debug of data_tx : signal is "TRUE";
 attribute mark_debug of data_rx : signal is "TRUE";  
 attribute mark_debug of bit_cnt : signal is "TRUE";  
 attribute mark_debug of stretch : signal is "TRUE"; 
-  
+
+attribute keep of state : signal is "TRUE";  
+attribute keep of data_clk : signal is "TRUE";  
+attribute keep of data_clk_prev : signal is "TRUE";  
+attribute keep of scl_clk : signal is "TRUE";  
+attribute keep of scl_ena : signal is "TRUE";  
+attribute keep of sda_int : signal is "TRUE";  
+attribute keep of sda_ena_n : signal is "TRUE";  
+attribute keep of addr_rw : signal is "TRUE";  
+attribute keep of data_tx : signal is "TRUE";  
+attribute keep of data_rx : signal is "TRUE";  
+attribute keep of bit_cnt : signal is "TRUE";  
+attribute keep of stretch : signal is "TRUE"; 
+
+attribute dont_touch of state : signal is "TRUE";  
+attribute dont_touch of data_clk : signal is "TRUE";  
+attribute dont_touch of data_clk_prev : signal is "TRUE";  
+attribute dont_touch of scl_clk : signal is "TRUE";  
+attribute dont_touch of scl_ena : signal is "TRUE";  
+attribute dont_touch of sda_int : signal is "TRUE";  
+attribute dont_touch of sda_ena_n : signal is "TRUE";  
+attribute dont_touch of addr_rw : signal is "TRUE";  
+attribute dont_touch of data_tx : signal is "TRUE";  
+attribute dont_touch of data_rx : signal is "TRUE";  
+attribute dont_touch of bit_cnt : signal is "TRUE";  
+attribute dont_touch of stretch : signal is "TRUE"; 
+
+
 begin
 
   --generate the timing for the bus clock (scl_clk) and the data clock (data_clk)
@@ -191,17 +240,17 @@ begin
                 state <= rd;                 --go to read byte
               else                           --continue transaction with a write or new slave
                 state <= start;              --repeated start
-              end if;    
+              end if;
             else                             --complete transaction
               state <= stop;                 --go to stop bit
             end if;
           when stop =>                       --stop bit of transaction
             busy <= '0';                     --unflag busy
             state <= ready;                  --go to idle state
-        end case;    
+        end case;
       elsif(data_clk = '0' and data_clk_prev = '1') then  --data clock falling edge
         case state is
-          when start =>                  
+          when start =>
             if(scl_ena = '0') then                  --starting new transaction
               scl_ena <= '1';                       --enable scl output
               ack_error <= '0';                     --reset acknowledge error output
@@ -223,29 +272,28 @@ begin
         end case;
       end if;
     end if;
-  end process;  
+  end process;
 
   --set sda output
   with state select
     sda_ena_n <= data_clk_prev when start,     --generate start condition
                  not data_clk_prev when stop,  --generate stop condition
-                 sda_int when others;          --set to internal sda signal 
-					  
-  -- ready, start, command, slv_ack1, wr, rd, slv_ack2, mstr_ack, stop
-  with state select
-    dbg_state <= "0000" when ready,
-                 "0001" when start,
-                 "0011" when command,
-                 "0111" when slv_ack1,
-                 "1111" when wr,
-                 "1110" when rd,
-                 "1100" when slv_ack2,
-                 "1000" when mstr_ack,
-                 "1001" when stop,
-                 "0000" when others;
-  
+                 sda_int when others;          --set to internal sda signal
+
   --set scl and sda outputs
   scl <= '0' when (scl_ena = '1' and scl_clk = '0') else 'H';
   sda <= '0' when sda_ena_n = '0' else 'H';
-  
+
+  -- ready, start, command, slv_ack1, wr, rd, slv_ack2, mstr_ack, stop 
+  with state select 
+    dbg_state <= "0000" when ready, 
+                 "0001" when start, 
+                 "0011" when command, 
+                 "0111" when slv_ack1, 
+                 "1111" when wr, 
+                 "1110" when rd, 
+                 "1100" when slv_ack2, 
+                 "1000" when mstr_ack, 
+                 "1001" when stop, 
+                 "0000" when others; 
 end logic;
