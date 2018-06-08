@@ -4,16 +4,16 @@ use ieee.numeric_std.all;
 use work.dot_fonts.all;
 
 entity microdot_phat_driver is
-	port(sclk:	in std_logic;
-	     sda:	inout std_logic;
-	     scl:	inout std_logic;
-	     dbg_st:	out std_logic_vector(3 downto 0);
-	     kick_cmd:	buffer std_logic;
-	     valid_kick:buffer std_logic;
-	     device_busy:buffer std_logic;
-	     reset_n:buffer std_logic;
-	     ena:buffer std_logic;
-	     module_sel:buffer std_logic);
+	port(sclk:		in std_logic;
+	     sda:		inout std_logic;
+	     scl:		inout std_logic;
+
+	     kick_cmd:		buffer std_logic;
+	     valid_kick:	buffer std_logic;
+	     module_sel:	buffer std_logic;
+	     dbg_module_id:	out std_logic_vector(2 downto 0);
+	     dbg_i2c_addr:	out std_logic_vector(6 downto 0)
+	    );
 end microdot_phat_driver;
 
 architecture behavior of microdot_phat_driver is
@@ -33,9 +33,9 @@ attribute dont_touch  :  string;
 	signal i2c_addr:	natural;
 --	signal module_sel:	std_logic;
 	signal dot_matrix:	dot_matrix_t;
---	signal device_busy:	std_logic;
---	signal reset_n:		std_logic;
---	signal ena:		std_logic;
+	signal device_busy:	std_logic;
+	signal reset_n:		std_logic;
+	signal ena:		std_logic;
 	signal addr:		std_logic_vector(6 downto 0);
 	signal rw:		std_logic;
 	signal txdata:		std_logic_vector(7 downto 0);
@@ -43,6 +43,8 @@ attribute dont_touch  :  string;
 	signal ack_err:		std_logic;
 	signal ack_err2:	std_logic;
 	signal data_rd:		std_logic_vector(7 downto 0);
+	-- debug signals
+	signal dbg_st:		std_logic_vector(3 downto 0);
 
 attribute mark_debug of clk_cnt : signal is "TRUE";  
 attribute mark_debug of sym_code : signal is "TRUE"; 
@@ -97,7 +99,8 @@ attribute dont_touch of data_rd : signal is "TRUE";
 
 
 	component dot_matrix_ctrl is
-		port(symbol_code:	in natural;
+		port(sclk:		in std_logic;
+		     symbol_code:	in natural;
 		     module_id:		in natural;
 		     kick_cmd:		in std_logic;
 		     valid_kick:	out std_logic;
@@ -138,7 +141,8 @@ attribute dont_touch of data_rd : signal is "TRUE";
 
 begin
 	s1: dot_matrix_ctrl
-	port map(symbol_code	=> sym_code,
+	port map(sclk		=> sclk,
+		 symbol_code	=> sym_code,
 		 module_id	=> module_id,
 		 kick_cmd	=> kick_cmd,
 		 valid_kick	=> valid_kick,
@@ -208,4 +212,7 @@ begin
 		end if;
 	end process kick_gen;
 
+	-- debug signals assignments
+	dbg_module_id <= std_logic_vector(to_unsigned(module_id, 3));
+	dbg_i2c_addr <= std_logic_vector(to_unsigned(i2c_addr, 7));
 end;
