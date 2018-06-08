@@ -8,7 +8,8 @@ use ieee.numeric_std.all;
 use work.dot_fonts.all;
 
 entity dot_matrix_ctrl is
-	port(symbol_code:	in natural;
+	port(sclk:		in std_logic;
+	     symbol_code:	in natural;
 	     module_id:		in natural;
 	     kick_cmd:		in std_logic;
 	     valid_kick:	out std_logic;
@@ -24,22 +25,23 @@ architecture arch of dot_matrix_ctrl is
 begin
 
 	-- propagate the kick signal only if the inputs are valid
-	validate_kick: process(kick_cmd)
+	validate_kick: process(sclk, kick_cmd)
 	begin
-		if rising_edge(kick_cmd) then
-			if (symbol_valid = '1') and (module_valid = '1') then
+--		if rising_edge(kick_cmd) then
+			if (kick_cmd = '1') and (symbol_valid = '1') and (module_valid = '1') then
 				valid_kick <= '1';
 			else
 				valid_kick <= '0';
 			end if;
-		end if;
+--		end if;
+
 	end process validate_kick;
 
 	-- translate a character code (like ASCII) into a matrix of binary values
 	symbol_translate: process(symbol_code)
 	begin
 		dot_matrix <= get_dot_char(symbol_code);
-		if symbol_code < 50 then
+		if symbol_code < 20 then
 			symbol_valid <= '1';
 		else
 			symbol_valid <= '0';
