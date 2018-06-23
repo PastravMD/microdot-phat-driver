@@ -13,7 +13,10 @@ entity microdot_phat_driver is
 	     module_sel:	buffer std_logic;
 
 	     debug_bus_3bit:	out std_logic_vector(2 downto 0);
-	     debug_bus_7bit:	out std_logic_vector(6 downto 0)
+	     debug_bus_7bit:	out std_logic_vector(6 downto 0);
+
+	     dbg_val_sym:	out std_logic;
+	     dbg_val_mod:	out std_logic
 	    );
 end microdot_phat_driver;
 
@@ -108,7 +111,9 @@ attribute dont_touch of data_rd : signal is "TRUE";
 		     valid_kick:	buffer std_logic; --out std_logic;
 		     dot_matrix:	out dot_matrix_t;
 		     i2c_addr:		out natural;
-		     module_sel:	buffer std_logic); --out std_logic);
+		     module_sel:	buffer std_logic; --out std_logic);
+		     dbg_val_sym:	out std_logic;
+		     dbg_val_mod:	out std_logic);
 	end component dot_matrix_ctrl;
 
 	component is31fl3730_ctrl
@@ -150,7 +155,10 @@ begin
 		 valid_kick	=> valid_kick,
 		 dot_matrix	=> dot_matrix,
 		 i2c_addr	=> i2c_addr,
-		 module_sel	=> module_sel);
+		 module_sel	=> module_sel,
+		 dbg_val_sym	=> dbg_val_sym,
+		 dbg_val_mod	=> dbg_val_mod
+		 );
 
 
 	s2: is31fl3730_ctrl
@@ -212,13 +220,10 @@ begin
 					sym_code <= 0;
 					module_id <= 0;
 				else
-					sym_code <= sym_code + 1;
 					module_id <= ((sym_code + 1) rem 8);
+					sym_code <= sym_code + 1;
 				end if;
 
-				-- debug signals assignments
-				debug_bus_3bit <= std_logic_vector(to_unsigned(module_id, 3));
-				debug_bus_7bit <= std_logic_vector(to_unsigned(sym_code, 7));
 			end if;
 		end if;
 	end process symbol_gen;
@@ -227,6 +232,10 @@ begin
 	begin
 		if rising_edge(sclk) then
 			module_sel2 <= module_sel;
+
+			-- debug signals assignments
+			debug_bus_3bit <= std_logic_vector(to_unsigned(module_id, 3));
+			debug_bus_7bit <= std_logic_vector(to_unsigned(sym_code, 7));
 		end if;
 	end process synch_assign;
 end;

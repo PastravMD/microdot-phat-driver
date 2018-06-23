@@ -15,7 +15,9 @@ entity dot_matrix_ctrl is
 	     valid_kick:	buffer std_logic; --out std_logic;
 	     dot_matrix:	out dot_matrix_t;
 	     i2c_addr:		out natural;
-	     module_sel:	buffer std_logic); --out std_logic);
+	     module_sel:	buffer std_logic; --out std_logic);
+	     dbg_val_sym:	out std_logic;
+	     dbg_val_mod:	out std_logic);
 end dot_matrix_ctrl;
 
 
@@ -43,8 +45,10 @@ begin
 			dot_matrix <= get_dot_char(symbol_code);
 			if symbol_code < 20 then
 				symbol_valid <= '1';
+				dbg_val_sym <= '1';
 			else
 				symbol_valid <= '0';
+				dbg_val_sym <= '0';
 			end if;
 		end if;
 	end process symbol_translate;
@@ -56,13 +60,13 @@ begin
 	begin
 		if rising_edge(sclk) then
 			case (module_id) is
-				when 1 => i2c_addr <= 16#61#; module_sel <= '0'; module_valid <= '1';
-				when 2 => i2c_addr <= 16#61#; module_sel <= '1'; module_valid <= '1';
-				when 3 => i2c_addr <= 16#62#; module_sel <= '0'; module_valid <= '1';
-				when 4 => i2c_addr <= 16#62#; module_sel <= '1'; module_valid <= '1';
-				when 5 => i2c_addr <= 16#63#; module_sel <= '0'; module_valid <= '1';
-				when 6 => i2c_addr <= 16#63#; module_sel <= '1'; module_valid <= '1';
-				when others => i2c_addr <= 0; module_sel <= '0'; module_valid <= '0';
+				when 1 => i2c_addr <= 16#61#; module_sel <= '0'; module_valid <= '1'; dbg_val_mod <= '1';
+				when 2 => i2c_addr <= 16#61#; module_sel <= '1'; module_valid <= '1'; dbg_val_mod <= '1';
+				when 3 => i2c_addr <= 16#62#; module_sel <= '0'; module_valid <= '1'; dbg_val_mod <= '1';
+				when 4 => i2c_addr <= 16#62#; module_sel <= '1'; module_valid <= '1'; dbg_val_mod <= '1';
+				when 5 => i2c_addr <= 16#63#; module_sel <= '0'; module_valid <= '1'; dbg_val_mod <= '1';
+				when 6 => i2c_addr <= 16#63#; module_sel <= '1'; module_valid <= '1'; dbg_val_mod <= '1';
+				when others => i2c_addr <= 0; module_sel <= '0'; module_valid <= '0'; dbg_val_mod <= '0';
 			end case;
 		end if;
 	end process id_translate;

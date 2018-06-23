@@ -19,3 +19,5 @@ net  debug_bus_3bit(0)		loc = h2;
 net  debug_bus_3bit(1)		loc = f2;
 net  debug_bus_3bit(2)		loc = e2;
 
+net dbg_val_sym		loc = b1;
+net dbg_val_mod		loc = h1;
