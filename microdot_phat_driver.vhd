@@ -11,8 +11,9 @@ entity microdot_phat_driver is
 	     kick_cmd:		buffer std_logic;
 	     valid_kick:	buffer std_logic;
 	     module_sel:	buffer std_logic;
-	     dbg_module_id:	out std_logic_vector(2 downto 0);
-	     dbg_i2c_addr:	out std_logic_vector(6 downto 0)
+
+	     debug_bus_3bit:	out std_logic_vector(2 downto 0);
+	     debug_bus_7bit:	out std_logic_vector(6 downto 0)
 	    );
 end microdot_phat_driver;
 
@@ -32,6 +33,7 @@ attribute dont_touch  :  string;
 --	signal valid_kick:	std_logic;
 	signal i2c_addr:	natural;
 --	signal module_sel:	std_logic;
+	signal module_sel2:	std_logic;
 	signal dot_matrix:	dot_matrix_t;
 	signal device_busy:	std_logic;
 	signal reset_n:		std_logic;
@@ -103,10 +105,10 @@ attribute dont_touch of data_rd : signal is "TRUE";
 		     symbol_code:	in natural;
 		     module_id:		in natural;
 		     kick_cmd:		in std_logic;
-		     valid_kick:	out std_logic;
+		     valid_kick:	buffer std_logic; --out std_logic;
 		     dot_matrix:	out dot_matrix_t;
 		     i2c_addr:		out natural;
-		     module_sel:	out std_logic);
+		     module_sel:	buffer std_logic); --out std_logic);
 	end component dot_matrix_ctrl;
 
 	component is31fl3730_ctrl
@@ -150,11 +152,12 @@ begin
 		 i2c_addr	=> i2c_addr,
 		 module_sel	=> module_sel);
 
+
 	s2: is31fl3730_ctrl
 	port map(sclk		=> sclk,
 		 kick_cmd	=> valid_kick,
 		 i2c_addr	=> i2c_addr,
-		 module_sel	=> module_sel,
+		 module_sel	=> module_sel2,
 		 dot_matrix	=> dot_matrix,
 		 device_busy	=> device_busy,
 		 reset_n	=> reset_n,
@@ -189,30 +192,40 @@ begin
 		end if;
 	end process clk_counter;
 
-	-- run through all symbols
-	symbol_gen : process(kick_cmd)
+	kick_gen: process (sclk, clk_cnt) is
 	begin
-		if falling_edge(kick_cmd) then
-			if sym_code > 50 then
-				sym_code <= 0;
+		if rising_edge(sclk) then
+			if (clk_cnt mod 4000 /= 0) then
+				kick_cmd <= '0';
 			else
-				sym_code <= sym_code + 1;
+				kick_cmd <= '1';
+			end if;
+		end if;
+	end process kick_gen;
+
+	-- run through all symbols
+	symbol_gen : process(sclk, kick_cmd)
+	begin
+		if rising_edge(sclk) then
+			if kick_cmd = '1' then
+				if sym_code > 50 then
+					sym_code <= 0;
+				else
+					sym_code <= sym_code + 1;
+				end if;
 			end if;
 		end if;
 	end process symbol_gen;
 
-	module_id <= (sym_code rem 7);
-
-	kick_gen: process (clk_cnt) is
+	synch_assign: process(sclk, module_sel, module_id, sym_code) is
 	begin
-		if (clk_cnt mod 136 /= 0) then 
-			kick_cmd <= '0';
-		else
-			kick_cmd <= '1';
-		end if;
-	end process kick_gen;
+		if rising_edge(sclk) then
+			module_sel2 <= module_sel;
+			module_id <= (sym_code rem 8);
 
-	-- debug signals assignments
-	dbg_module_id <= std_logic_vector(to_unsigned(module_id, 3));
-	dbg_i2c_addr <= std_logic_vector(to_unsigned(i2c_addr, 7));
+			-- debug signals assignments
+			debug_bus_3bit <= std_logic_vector(to_unsigned(module_id, 3));
+			debug_bus_7bit <= std_logic_vector(to_unsigned(sym_code, 7));
+		end if;
+	end process synch_assign;
 end;

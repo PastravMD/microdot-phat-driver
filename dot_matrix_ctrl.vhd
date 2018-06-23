@@ -12,10 +12,10 @@ entity dot_matrix_ctrl is
 	     symbol_code:	in natural;
 	     module_id:		in natural;
 	     kick_cmd:		in std_logic;
-	     valid_kick:	out std_logic;
+	     valid_kick:	buffer std_logic; --out std_logic;
 	     dot_matrix:	out dot_matrix_t;
 	     i2c_addr:		out natural;
-	     module_sel:	out std_logic);
+	     module_sel:	buffer std_logic); --out std_logic);
 end dot_matrix_ctrl;
 
 
@@ -25,7 +25,7 @@ architecture arch of dot_matrix_ctrl is
 begin
 
 	-- propagate the kick signal only if the inputs are valid
-	validate_kick: process(sclk, kick_cmd)
+	validate_kick: process(sclk, kick_cmd, symbol_valid, module_valid)
 	begin
 --		if rising_edge(kick_cmd) then
 			if (kick_cmd = '1') and (symbol_valid = '1') and (module_valid = '1') then
