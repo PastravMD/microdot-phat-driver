@@ -27,45 +27,44 @@ begin
 	-- propagate the kick signal only if the inputs are valid
 	validate_kick: process(sclk, kick_cmd, symbol_valid, module_valid)
 	begin
---		if rising_edge(kick_cmd) then
+		if rising_edge(sclk) then
 			if (kick_cmd = '1') and (symbol_valid = '1') and (module_valid = '1') then
 				valid_kick <= '1';
 			else
 				valid_kick <= '0';
 			end if;
---		end if;
-
+		end if;
 	end process validate_kick;
 
 	-- translate a character code (like ASCII) into a matrix of binary values
-	symbol_translate: process(symbol_code)
+	symbol_translate: process(sclk, symbol_code)
 	begin
-		dot_matrix <= get_dot_char(symbol_code);
-		if symbol_code < 20 then
-			symbol_valid <= '1';
-		else
-			symbol_valid <= '0';
+		if rising_edge(sclk) then
+			dot_matrix <= get_dot_char(symbol_code);
+			if symbol_code < 20 then
+				symbol_valid <= '1';
+			else
+				symbol_valid <= '0';
+			end if;
 		end if;
 	end process symbol_translate;
 
 	-- address the n-th LTP305 module using the i2c address of the IS31FL27 LED controller that
 	-- drives it and a binary value that indicates which of the 2 modules is driven
 	-- NB: valid module numbers are 1 to 6, everything else including 0 are ignored
-	id_translate: process(module_id)
+	id_translate: process(sclk, module_id)
 	begin
-		module_valid <= '1';
-		case (module_id) is
-			when 1 => i2c_addr <= 16#61#; module_sel <= '0';
-			when 2 => i2c_addr <= 16#61#; module_sel <= '1';
-			when 3 => i2c_addr <= 16#62#; module_sel <= '0';
-			when 4 => i2c_addr <= 16#62#; module_sel <= '1';
-			when 5 => i2c_addr <= 16#63#; module_sel <= '0';
-			when 6 => i2c_addr <= 16#63#; module_sel <= '1';
-			when others =>
-				module_valid	<= '0';
-				i2c_addr	<= 0;
-				module_sel 	<= '0';
-		end case;
+		if rising_edge(sclk) then
+			case (module_id) is
+				when 1 => i2c_addr <= 16#61#; module_sel <= '0'; module_valid <= '1';
+				when 2 => i2c_addr <= 16#61#; module_sel <= '1'; module_valid <= '1';
+				when 3 => i2c_addr <= 16#62#; module_sel <= '0'; module_valid <= '1';
+				when 4 => i2c_addr <= 16#62#; module_sel <= '1'; module_valid <= '1';
+				when 5 => i2c_addr <= 16#63#; module_sel <= '0'; module_valid <= '1';
+				when 6 => i2c_addr <= 16#63#; module_sel <= '1'; module_valid <= '1';
+				when others => i2c_addr <= 0; module_sel <= '0'; module_valid <= '0';
+			end case;
+		end if;
 	end process id_translate;
 end arch;
 

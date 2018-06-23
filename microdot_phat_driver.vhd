@@ -184,7 +184,7 @@ begin
 	clk_counter: process(sclk) is
 	begin
 		if rising_edge(sclk) then
-			if clk_cnt < (natural'high - 1) then
+			if clk_cnt < 50 then
 				clk_cnt <= clk_cnt + 1;
 			else
 				clk_cnt <= 0;
@@ -195,24 +195,30 @@ begin
 	kick_gen: process (sclk, clk_cnt) is
 	begin
 		if rising_edge(sclk) then
-			if (clk_cnt mod 4000 /= 0) then
-				kick_cmd <= '0';
-			else
+			if (clk_cnt = 12) then
 				kick_cmd <= '1';
+			else
+				kick_cmd <= '0';
 			end if;
 		end if;
 	end process kick_gen;
 
 	-- run through all symbols
-	symbol_gen : process(sclk, kick_cmd)
+	symbol_gen : process(sclk, clk_cnt)
 	begin
 		if rising_edge(sclk) then
-			if kick_cmd = '1' then
+			if clk_cnt = 10 then
 				if sym_code > 50 then
 					sym_code <= 0;
+					module_id <= 0;
 				else
 					sym_code <= sym_code + 1;
+					module_id <= ((sym_code + 1) rem 8);
 				end if;
+
+				-- debug signals assignments
+				debug_bus_3bit <= std_logic_vector(to_unsigned(module_id, 3));
+				debug_bus_7bit <= std_logic_vector(to_unsigned(sym_code, 7));
 			end if;
 		end if;
 	end process symbol_gen;
@@ -221,11 +227,6 @@ begin
 	begin
 		if rising_edge(sclk) then
 			module_sel2 <= module_sel;
-			module_id <= (sym_code rem 8);
-
-			-- debug signals assignments
-			debug_bus_3bit <= std_logic_vector(to_unsigned(module_id, 3));
-			debug_bus_7bit <= std_logic_vector(to_unsigned(sym_code, 7));
 		end if;
 	end process synch_assign;
 end;
