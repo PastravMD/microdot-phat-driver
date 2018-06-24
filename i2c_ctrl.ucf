@@ -1,23 +1,31 @@
 net	sclk		loc = a9;
 net	sda		loc = a2;
-net	scl		loc = b2;
+#net	scl		loc = b2;
 
-net  kick_cmd		loc = r2;
-net  valid_kick		loc = m2;
-net  module_sel		loc = k3;
+net  debug_bus_8bit(0)		loc = t4;
+net  debug_bus_8bit(1)		loc = r1;
+net  debug_bus_8bit(2)		loc = m1;
+net  debug_bus_8bit(3)		loc = j4;
+net  debug_bus_8bit(4)		loc = f1;
+net  debug_bus_8bit(5)		loc = e1;
+net  debug_bus_8bit(6)		loc = c1;
+net  debug_bus_8bit(7)		loc = b2;
 
-net  debug_bus_7bit(0)		loc = t4;
-net  debug_bus_7bit(1)		loc = r1;
-net  debug_bus_7bit(2)		loc = m1;
-net  debug_bus_7bit(3)		loc = j4;
-net  debug_bus_7bit(4)		loc = f1;
-net  debug_bus_7bit(5)		loc = e1;
-net  debug_bus_7bit(6)		loc = c1;
+net  debug_bus_4bit(0)		loc = h2;
+net  debug_bus_4bit(1)		loc = f2;
+net  debug_bus_4bit(2)		loc = e2;
+net  debug_bus_4bit(3)		loc = b1;
+
+net  dbg_busy			loc = r2;
+net  dbg_rst			loc = m2;
+net  dbg_ena			loc = k3;
+net  dbg_clk			loc = h1;
 
 
-net  debug_bus_3bit(0)		loc = h2;
-net  debug_bus_3bit(1)		loc = f2;
-net  debug_bus_3bit(2)		loc = e2;
 
-net dbg_val_sym		loc = b1;
-net dbg_val_mod		loc = h1;
+
+
+
+
+
+

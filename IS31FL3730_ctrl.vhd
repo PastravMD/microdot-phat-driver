@@ -12,6 +12,8 @@ entity IS31FL3730_ctrl is
 	      dot_matrix:	in dot_matrix_t;
 	      device_busy:	in std_logic;
 
+	      dbg_ps:		out natural;
+
 	      reset_n:		out std_logic;
 	      ena:		out std_logic;
 	      addr:		out std_logic_vector(6 downto 0);
@@ -28,44 +30,62 @@ attribute keep    :  string;
 attribute mark_debug  :  string;
 attribute dont_touch  :  string;
 
-	signal ns, ps		: display_update_state;
+signal ns, ps		: display_update_state;
 
-	-- local signals required to latch input values when kicked
-	signal active_i2c_addr:	natural;
-	signal active_module:	std_logic;
-	signal active_symbol:	dot_matrix_t;
+-- local signals required to latch input values when kicked
+signal active_i2c_addr:	natural;
+signal active_module:	std_logic;
+signal active_symbol:	dot_matrix_t;
 
-attribute mark_debug of ns : signal is "TRUE";  
-attribute mark_debug of ps : signal is "TRUE"; 
+signal cnt: natural;
+signal sloclk: std_logic;
+
+attribute mark_debug of ns : signal is "TRUE";
+attribute mark_debug of ps : signal is "TRUE";
 attribute mark_debug of active_i2c_addr : signal is "TRUE";
-attribute mark_debug of active_module : signal is "TRUE";  
-attribute mark_debug of active_symbol : signal is "TRUE";  
+attribute mark_debug of active_module : signal is "TRUE";
+attribute mark_debug of active_symbol : signal is "TRUE";
 
-attribute keep of ns : signal is "TRUE";  
-attribute keep of ps : signal is "TRUE"; 
+attribute keep of ns : signal is "TRUE";
+attribute keep of ps : signal is "TRUE";
 attribute keep of active_i2c_addr : signal is "TRUE";
-attribute keep of active_module : signal is "TRUE";  
-attribute keep of active_symbol : signal is "TRUE";  
+attribute keep of active_module : signal is "TRUE";
+attribute keep of active_symbol : signal is "TRUE";
 
-attribute dont_touch of ns : signal is "TRUE";  
-attribute dont_touch of ps : signal is "TRUE"; 
+attribute dont_touch of ns : signal is "TRUE";
+attribute dont_touch of ps : signal is "TRUE";
 attribute dont_touch of active_i2c_addr : signal is "TRUE";
-attribute dont_touch of active_module : signal is "TRUE";  
-attribute dont_touch of active_symbol : signal is "TRUE";  
+attribute dont_touch of active_module : signal is "TRUE";
+attribute dont_touch of active_symbol : signal is "TRUE";
 
 
 begin
-	sync_proc: process(sclk)
+	clk_divider: process(sclk)
 	begin
 		if rising_edge(sclk) then
+			cnt <= cnt + 1;
+		end if;
+
+		if (cnt rem 1000 = 0) then
+			sloclk <= '1';
+		else
+			sloclk <= '0';
+		end if;
+	end process clk_divider;
+
+	sync_proc: process(sloclk)
+	begin
+		if rising_edge(sloclk) then
 			ps <= ns;
+			dbg_ps <= natural(display_update_state'POS(ns));
 		end if;
 	end process sync_proc;
 
-	comb_proc: process(ps, kick_cmd, device_busy,
+	comb_proc: process(sloclk, ps, kick_cmd, device_busy,
 			   dot_matrix, i2c_addr, module_sel,
 			   active_i2c_addr, active_module, active_symbol)
 	begin
+	if rising_edge(sloclk) then
 		case ps is
 			when st_ready =>
 				reset_n		<= '0';
@@ -148,6 +168,7 @@ begin
 				reset_n		<= '0';
 				ns <= st_ready;
 		end case;
+	end if;
 	end process comb_proc;
 
 end arch;
