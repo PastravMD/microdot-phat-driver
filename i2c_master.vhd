@@ -288,12 +288,12 @@ begin
   with state select 
     dbg_state <= "0000" when ready, 
                  "0001" when start, 
-                 "0011" when command, 
-                 "0111" when slv_ack1, 
-                 "1111" when wr, 
-                 "1110" when rd, 
-                 "1100" when slv_ack2, 
-                 "1000" when mstr_ack, 
-                 "1001" when stop, 
-                 "0000" when others; 
+                 "0010" when command, 
+                 "0011" when slv_ack1, 
+                 "0100" when wr, 
+                 "0101" when rd, 
+                 "0110" when slv_ack2, 
+                 "0111" when mstr_ack, 
+                 "1000" when stop, 
+                 "1111" when others; 
 end logic;
