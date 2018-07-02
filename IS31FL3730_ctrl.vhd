@@ -37,8 +37,8 @@ signal active_i2c_addr:	natural;
 signal active_module:	std_logic;
 signal active_symbol:	dot_matrix_t;
 
-signal end_data_cnt: natural;
-signal finish_cnt: natural;
+--signal end_data_cnt: natural;
+signal delay_cnt: natural;
 
 attribute mark_debug of ns : signal is "TRUE";
 attribute mark_debug of ps : signal is "TRUE";
@@ -60,22 +60,11 @@ attribute dont_touch of active_symbol : signal is "TRUE";
 
 
 begin
-	delay: process(sclk, ps)
-	begin
-		if rising_edge(sclk) then
-			if ps = st_end_data_tx then
-				end_data_cnt <= end_data_cnt + 1;
-			else
-				end_data_cnt <= 0;
-			end if;
-		end if;
-	end process delay;
-
 	sync_proc: process(sclk)
 	begin
 		if rising_edge(sclk) then
 			-- only advance the state if the i2c controller is idle
-			if device_busy = '0' or ns = st_init_data_tx or ns = st_ready then
+			if device_busy = '0' or ns = st_init_data_tx or ns = st_init_update or ns = st_ready then
 				ps <= ns;
 			end if;
 			dbg_ps <= natural(display_update_state'POS(ps));
@@ -96,82 +85,123 @@ begin
 					active_symbol	<= dot_matrix;
 					active_i2c_addr	<= i2c_addr;
 					active_module 	<= module_sel;
+					reset_n		<= '1';
+
+					rw		<= '0';
+					addr		<= std_logic_vector(to_unsigned(i2c_addr, 7)); -- not active_i2c_addr since that's not set atm in the process
+					if module_sel = '0' then --not active_model in here
+						txdata <= "00000001"; -- 0x1 mat 1 data reg address
+					else
+						txdata <= "00001110"; -- 0xE mat 2 data reg address
+					end if;
 				end if;
 			when st_init_data_tx =>
-				reset_n		<= '1';
-				ena		<= '1';
-				rw		<= '0';
-				addr		<= std_logic_vector(to_unsigned(active_i2c_addr, 7));
-				if active_module = '0' then
-					txdata <= "00000001"; -- 0x1 mat 1 data reg address
-				else
-					txdata <= "00001110"; -- 0xE mat 2 data reg address
-				end if;
-
-				if device_busy = '1' then
+				if delay_cnt < 30 then
+					delay_cnt <= delay_cnt + 1;
+				elsif delay_cnt < 60 then
+					delay_cnt <= delay_cnt + 1;
+					ena		<= '1';
+				elsif device_busy = '1' then
 					ns <= st_byte_0;
+					txdata		<= get_char_line(active_symbol, 0, active_module);
+					delay_cnt <= 0;
 				end if;
 			when st_byte_0 =>
-				txdata		<= get_char_line(active_symbol, 0, active_module);
-				if device_busy = '1' then
+				if delay_cnt < 30 then
+					delay_cnt <= delay_cnt + 1;
+				elsif device_busy = '1' then
 					ns <= st_byte_1;
+					txdata		<= get_char_line(active_symbol, 1, active_module);
+					delay_cnt <= 0;
 				end if;
 			when st_byte_1 =>
-				txdata		<= get_char_line(active_symbol, 1, active_module);
-				if device_busy = '1' then
+				if delay_cnt < 30 then
+					delay_cnt <= delay_cnt + 1;
+				elsif device_busy = '1' then
 					ns <= st_byte_2;
+					txdata		<= get_char_line(active_symbol, 2, active_module);
+					delay_cnt <= 0;
 				end if;
 			when st_byte_2 =>
-				txdata		<= get_char_line(active_symbol, 2, active_module);
-				if device_busy = '1' then
+				if delay_cnt < 30 then
+					delay_cnt <= delay_cnt + 1;
+				elsif device_busy = '1' then
 					ns <= st_byte_3;
+					txdata		<= get_char_line(active_symbol, 3, active_module);
+					delay_cnt <= 0;
 				end if;
 			when st_byte_3 =>
-				txdata		<= get_char_line(active_symbol, 3, active_module);
-				if device_busy = '1' then
+				if delay_cnt < 30 then
+					delay_cnt <= delay_cnt + 1;
+				elsif device_busy = '1' then
 					ns <= st_byte_4;
+					txdata		<= get_char_line(active_symbol, 4, active_module);
+					delay_cnt <= 0;
 				end if;
 			when st_byte_4 =>
-				txdata		<= get_char_line(active_symbol, 4, active_module);
-				if device_busy = '1' then
+				if delay_cnt < 30 then
+					delay_cnt <= delay_cnt + 1;
+				elsif device_busy = '1' then
 					ns <= st_byte_5;
+					txdata		<= get_char_line(active_symbol, 5, active_module);
+					delay_cnt <= 0;
 				end if;
 			when st_byte_5 =>
-				txdata		<= get_char_line(active_symbol, 5, active_module);
-				if device_busy = '1' then
+				if delay_cnt < 30 then
+					delay_cnt <= delay_cnt + 1;
+				elsif device_busy = '1' then
 					ns <= st_byte_6;
+					txdata		<= get_char_line(active_symbol, 6, active_module);
+					delay_cnt <= 0;
 				end if;
 			when st_byte_6 =>
-				txdata		<= get_char_line(active_symbol, 6, active_module);
-				if device_busy = '1' then
+				if delay_cnt < 30 then
+					delay_cnt <= delay_cnt + 1;
+				elsif device_busy = '1' then
 					ns <= st_byte_7;
+					txdata		<= get_char_line(active_symbol, 7, active_module);
+					delay_cnt <= 0;
 				end if;
 			when st_byte_7 =>
-				txdata		<= get_char_line(active_symbol, 7, active_module);
-				if device_busy = '1' then
+				if delay_cnt < 30 then
+					delay_cnt <= delay_cnt + 1;
+				elsif device_busy = '1' then
+					ena		<= '0';
 					ns <= st_end_data_tx;
+					delay_cnt <= 0;
 				end if;
 			when st_end_data_tx =>
-				ena		<= '0';
-				if end_data_cnt > 200 then
+				if delay_cnt < 30 then
+					delay_cnt <= delay_cnt + 1;
+				else
 					ns <= st_init_update;
+					txdata <= "00001100"; -- 0xC update reg address
+					delay_cnt <= 0;
 				end if;
 			when st_init_update =>
 				ena		<= '1';
-				txdata <= "00001100"; -- 0xC update reg address
-				if device_busy = '1' then
+				if delay_cnt < 30 then
+					delay_cnt <= delay_cnt + 1;
+				elsif device_busy = '1' then
 					ns <= st_update_latch;
+					txdata <= "11111111";
+					delay_cnt <= 0;
 				end if;
 			when st_update_latch =>
-				txdata <= "11111111";
-				if device_busy = '1' then
+				if delay_cnt < 30 then
+					delay_cnt <= delay_cnt + 1;
+				elsif device_busy = '1' then
 					ns <= st_finish;
+					delay_cnt <= 0;
+					ena		<= '0';
 				end if;
 			when st_finish =>
-				if finish_cnt > 200 then
-					ns <= st_init_update;
+				if delay_cnt < 30 then
+					delay_cnt <= delay_cnt + 1;
+				else
+					ns <= st_ready;
+					delay_cnt <= 0;
 				end if;
-				ns <= st_ready;
 		end case;
 	end if;
 	end process comb_proc;
