@@ -27,7 +27,9 @@ attribute mark_debug  :  string;
 attribute dont_touch  :  string;
 
 	-- simulate external inputs
+	signal fast_cnt:	natural;
 	signal clk_cnt:		natural;
+	signal sloclk:		std_logic;
 	-- dot matrix controller
 	signal sym_code:	natural;
 	signal module_id:	natural;
@@ -192,10 +194,22 @@ begin
 		 scl		=> scl,
 		 dbg_state	=> dbg_st);
 
-	clk_counter: process(sclk) is
+	fast_counter: process(sclk) is
 	begin
 		if rising_edge(sclk) then
-			if clk_cnt < 1200000 then
+			if fast_cnt < 100 then
+				fast_cnt <= fast_cnt + 1;
+			else
+				fast_cnt <= 0;
+				sloclk <= not sloclk;
+			end if;
+		end if;
+	end process fast_counter;
+
+	clk_counter: process(sloclk) is
+	begin
+		if rising_edge(sloclk) then
+			if clk_cnt < 12000 then
 				clk_cnt <= clk_cnt + 1;
 			else
 				clk_cnt <= 0;
@@ -203,9 +217,9 @@ begin
 		end if;
 	end process clk_counter;
 
-	kick_gen: process (sclk, clk_cnt) is
+	kick_gen: process (sloclk, clk_cnt) is
 	begin
-		if rising_edge(sclk) then
+		if rising_edge(sloclk) then
 			if (clk_cnt = 12) then
 				kick_cmd <= '1';
 			else
@@ -215,18 +229,17 @@ begin
 	end process kick_gen;
 
 	-- run through all symbols
-	symbol_gen : process(sclk, clk_cnt)
+	symbol_gen : process(sloclk, clk_cnt)
 	begin
-		if rising_edge(sclk) then
+		if rising_edge(sloclk) then
 			if clk_cnt = 10 then
-				if sym_code > 18 then
+				if sym_code > 23 then
 					sym_code <= 0;
 					module_id <= 0;
 				else
 					module_id <= ((sym_code + 1) rem 8);
 					sym_code <= sym_code + 1;
 				end if;
-
 			end if;
 		end if;
 	end process symbol_gen;
@@ -237,12 +250,12 @@ begin
 			module_sel2 <= module_sel;
 
 			-- debug signals assignments
-			debug_bus_4bit <= std_logic_vector(to_unsigned(dbg_ps, 4));
+			debug_bus_4bit <= std_logic_vector(to_unsigned(module_id, 4));
 			debug_bus_8bit <= txdata; --std_logic_vector(to_unsigned(sym_code, 7));
 		end if;
 	end process synch_assign;
 
-	dbg_clk <= sclk;
+	dbg_clk <= sloclk;
 	dbg_busy <= device_busy;
 	dbg_rst <= reset_n;
 	dbg_ena <= ena;
