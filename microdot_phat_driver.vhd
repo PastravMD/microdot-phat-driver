@@ -11,6 +11,7 @@ entity microdot_phat_driver is
 	     dbg_clk:		out std_logic;
 	     dbg_busy:		out std_logic;
 	     dbg_rst:		out std_logic;
+	     dbg_ena:		out std_logic;
 	     dbg_sda:		out std_logic;
 	     dbg_scl:		out std_logic;
 
@@ -194,7 +195,7 @@ begin
 	clk_counter: process(sclk) is
 	begin
 		if rising_edge(sclk) then
-			if clk_cnt < 9000 then
+			if clk_cnt < 1200000 then
 				clk_cnt <= clk_cnt + 1;
 			else
 				clk_cnt <= 0;
@@ -218,7 +219,7 @@ begin
 	begin
 		if rising_edge(sclk) then
 			if clk_cnt = 10 then
-				if sym_code > 50 then
+				if sym_code > 18 then
 					sym_code <= 0;
 					module_id <= 0;
 				else
@@ -236,7 +237,7 @@ begin
 			module_sel2 <= module_sel;
 
 			-- debug signals assignments
-			debug_bus_4bit <= dbg_st; --std_logic_vector(to_unsigned(dbg_ps, 4));
+			debug_bus_4bit <= std_logic_vector(to_unsigned(dbg_ps, 4));
 			debug_bus_8bit <= txdata; --std_logic_vector(to_unsigned(sym_code, 7));
 		end if;
 	end process synch_assign;
@@ -244,6 +245,7 @@ begin
 	dbg_clk <= sclk;
 	dbg_busy <= device_busy;
 	dbg_rst <= reset_n;
+	dbg_ena <= ena;
 	dbg_sda <= sda;
 	dbg_scl <= scl;
 end;

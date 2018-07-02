@@ -37,8 +37,8 @@ signal active_i2c_addr:	natural;
 signal active_module:	std_logic;
 signal active_symbol:	dot_matrix_t;
 
-signal cnt: natural;
-signal sloclk: std_logic;
+signal end_data_cnt: natural;
+signal finish_cnt: natural;
 
 attribute mark_debug of ns : signal is "TRUE";
 attribute mark_debug of ps : signal is "TRUE";
@@ -60,35 +60,37 @@ attribute dont_touch of active_symbol : signal is "TRUE";
 
 
 begin
-	clk_divider: process(sclk)
+	delay: process(sclk, ps)
 	begin
 		if rising_edge(sclk) then
-			cnt <= cnt + 1;
+			if ps = st_end_data_tx then
+				end_data_cnt <= end_data_cnt + 1;
+			else
+				end_data_cnt <= 0;
+			end if;
 		end if;
+	end process delay;
 
-		if (cnt rem 1000 = 0) then
-			sloclk <= '1';
-		else
-			sloclk <= '0';
-		end if;
-	end process clk_divider;
-
-	sync_proc: process(sloclk)
+	sync_proc: process(sclk)
 	begin
-		if rising_edge(sloclk) then
-			ps <= ns;
-			dbg_ps <= natural(display_update_state'POS(ns));
+		if rising_edge(sclk) then
+			-- only advance the state if the i2c controller is idle
+			if device_busy = '0' or ns = st_init_data_tx or ns = st_ready then
+				ps <= ns;
+			end if;
+			dbg_ps <= natural(display_update_state'POS(ps));
 		end if;
 	end process sync_proc;
 
-	comb_proc: process(sloclk, ps, kick_cmd, device_busy,
+	comb_proc: process(sclk, ps, kick_cmd, device_busy,
 			   dot_matrix, i2c_addr, module_sel,
 			   active_i2c_addr, active_module, active_symbol)
 	begin
-	if rising_edge(sloclk) then
+	if rising_edge(sclk) then
 		case ps is
 			when st_ready =>
 				reset_n		<= '0';
+				ena		<= '0';
 				if kick_cmd = '1' then
 					ns		<= st_init_data_tx; -- FIXME: make function for advancing the state ?
 					active_symbol	<= dot_matrix;
@@ -106,66 +108,69 @@ begin
 					txdata <= "00001110"; -- 0xE mat 2 data reg address
 				end if;
 
-				if device_busy = '0' then
+				if device_busy = '1' then
 					ns <= st_byte_0;
 				end if;
 			when st_byte_0 =>
 				txdata		<= get_char_line(active_symbol, 0, active_module);
-				if device_busy = '0' then
+				if device_busy = '1' then
 					ns <= st_byte_1;
 				end if;
 			when st_byte_1 =>
 				txdata		<= get_char_line(active_symbol, 1, active_module);
-				if device_busy = '0' then
+				if device_busy = '1' then
 					ns <= st_byte_2;
 				end if;
 			when st_byte_2 =>
 				txdata		<= get_char_line(active_symbol, 2, active_module);
-				if device_busy = '0' then
+				if device_busy = '1' then
 					ns <= st_byte_3;
 				end if;
 			when st_byte_3 =>
 				txdata		<= get_char_line(active_symbol, 3, active_module);
-				if device_busy = '0' then
+				if device_busy = '1' then
 					ns <= st_byte_4;
 				end if;
 			when st_byte_4 =>
 				txdata		<= get_char_line(active_symbol, 4, active_module);
-				if device_busy = '0' then
+				if device_busy = '1' then
 					ns <= st_byte_5;
 				end if;
 			when st_byte_5 =>
 				txdata		<= get_char_line(active_symbol, 5, active_module);
-				if device_busy = '0' then
+				if device_busy = '1' then
 					ns <= st_byte_6;
 				end if;
 			when st_byte_6 =>
 				txdata		<= get_char_line(active_symbol, 6, active_module);
-				if device_busy = '0' then
+				if device_busy = '1' then
 					ns <= st_byte_7;
 				end if;
 			when st_byte_7 =>
 				txdata		<= get_char_line(active_symbol, 7, active_module);
-				if device_busy = '0' then
+				if device_busy = '1' then
 					ns <= st_end_data_tx;
 				end if;
 			when st_end_data_tx =>
 				ena		<= '0';
-				ns <= st_init_update;
+				if end_data_cnt > 200 then
+					ns <= st_init_update;
+				end if;
 			when st_init_update =>
 				ena		<= '1';
 				txdata <= "00001100"; -- 0xC update reg address
-				if device_busy = '0' then
+				if device_busy = '1' then
 					ns <= st_update_latch;
 				end if;
 			when st_update_latch =>
 				txdata <= "11111111";
-				if device_busy = '0' then
+				if device_busy = '1' then
 					ns <= st_finish;
 				end if;
 			when st_finish =>
-				ena		<= '0';
-				reset_n		<= '0';
+				if finish_cnt > 200 then
+					ns <= st_init_update;
+				end if;
 				ns <= st_ready;
 		end case;
 	end if;
