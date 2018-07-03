@@ -24,7 +24,7 @@ entity IS31FL3730_ctrl is
 
 architecture arch of IS31FL3730_ctrl is
 	type display_update_state is (st_ready, st_init_data_tx, st_byte_0, st_byte_1, st_byte_2, st_byte_3, st_byte_4, st_byte_5,
-					st_byte_6, st_byte_7, st_end_data_tx, st_init_update, st_update_latch, st_finish);
+					st_byte_6, st_byte_7, st_end_data_tx, st_init_update, st_update_latch, st_end_data_tx2, st_init_cfg, st_update_cfg, st_finish);
 
 attribute keep    :  string;
 attribute mark_debug  :  string;
@@ -64,7 +64,7 @@ begin
 	begin
 		if rising_edge(sclk) then
 			-- only advance the state if the i2c controller is idle
-			if device_busy = '0' or ns = st_init_data_tx or ns = st_init_update or ns = st_ready then
+			if device_busy = '0' or ns = st_init_data_tx or ns = st_init_update or ns = st_init_cfg or ns = st_ready then
 				ps <= ns;
 			end if;
 			dbg_ps <= natural(display_update_state'POS(ps));
@@ -188,6 +188,31 @@ begin
 					delay_cnt <= 0;
 				end if;
 			when st_update_latch =>
+				if delay_cnt < 30 then
+					delay_cnt <= delay_cnt + 1;
+				elsif device_busy = '1' then
+					ns <= st_end_data_tx2;
+					delay_cnt <= 0;
+					ena		<= '0';
+				end if;
+			when st_end_data_tx2 =>
+				if delay_cnt < 30 then
+					delay_cnt <= delay_cnt + 1;
+				else
+					ns <= st_init_cfg;
+					txdata <= "00000000"; -- 0x0 config reg address
+					delay_cnt <= 0;
+				end if;
+			when st_init_cfg =>
+				ena		<= '1';
+				if delay_cnt < 30 then
+					delay_cnt <= delay_cnt + 1;
+				elsif device_busy = '1' then
+					ns <= st_update_cfg;
+					txdata <= "00011000";
+					delay_cnt <= 0;
+				end if;
+			when st_update_cfg =>
 				if delay_cnt < 30 then
 					delay_cnt <= delay_cnt + 1;
 				elsif device_busy = '1' then
